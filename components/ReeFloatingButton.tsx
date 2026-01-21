@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   AccessibilityInfo,
+  PanResponder,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,6 +37,11 @@ export function ReeFloatingButton() {
   const option2Anim = useRef(new Animated.Value(0)).current;
   const option3Anim = useRef(new Animated.Value(0)).current;
   const reduceMotion = useRef(false);
+  
+  // Track if user is dragging (to prevent opening on drag)
+  const isDragging = useRef(false);
+  const dragStartPosition = useRef({ x: 0, y: 0 });
+  const DRAG_THRESHOLD = 5; // pixels moved before considering it a drag
 
   useEffect(() => {
     const startPulse = () => {
@@ -157,12 +163,55 @@ export function ReeFloatingButton() {
   }, [scaleAnim]);
 
   const handlePress = useCallback(() => {
-    if (isOpen) {
-      closePopup();
-    } else {
-      openPopup();
+    // Only open/close if user didn't drag
+    if (!isDragging.current) {
+      if (isOpen) {
+        closePopup();
+      } else {
+        openPopup();
+      }
     }
   }, [isOpen, openPopup, closePopup]);
+  
+  // Create PanResponder to detect drag vs tap
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => false,
+      
+      onPanResponderGrant: (evt) => {
+        // Store starting position
+        dragStartPosition.current = {
+          x: evt.nativeEvent.pageX,
+          y: evt.nativeEvent.pageY,
+        };
+        isDragging.current = false;
+        handlePressIn();
+      },
+      
+      onPanResponderMove: (evt) => {
+        // Check if user has moved beyond threshold
+        const deltaX = Math.abs(evt.nativeEvent.pageX - dragStartPosition.current.x);
+        const deltaY = Math.abs(evt.nativeEvent.pageY - dragStartPosition.current.y);
+        
+        if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+          isDragging.current = true;
+        }
+      },
+      
+      onPanResponderRelease: () => {
+        handlePressOut();
+        // Small delay to ensure isDragging is checked in handlePress
+        setTimeout(() => {
+          handlePress();
+          // Reset dragging state after a short delay
+          setTimeout(() => {
+            isDragging.current = false;
+          }, 100);
+        }, 0);
+      },
+    })
+  ).current;
 
   const handleQuickTip = useCallback(() => {
     haptics.light();
@@ -279,7 +328,10 @@ export function ReeFloatingButton() {
           accessibilityLabel="Open Ree assistant menu"
           accessibilityRole="button"
         >
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <Animated.View 
+            style={{ transform: [{ scale: scaleAnim }] }}
+            {...panResponder.panHandlers}
+          >
             <LinearGradient
               colors={isOpen ? [colors.textSecondary, colors.text] : gradients.primary}
               start={{ x: 0, y: 0 }}

@@ -36,18 +36,18 @@ export default function TabLayout() {
           headerShown: false,
           tabBarStyle: {
             position: 'absolute',
-            backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(255, 255, 255, 0.97)',
+            backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(255, 255, 255, 0.98)',
             borderTopWidth: 0,
             height: Platform.OS === 'ios' ? 90 : 70,
-            paddingTop: 10,
-            paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+            paddingTop: 12,
+            paddingBottom: Platform.OS === 'ios' ? 30 : 12,
             elevation: 0,
             shadowOpacity: 0,
           },
           tabBarBackground: () => (
             Platform.OS === 'ios' ? (
               <BlurView
-                intensity={90}
+                intensity={95}
                 tint="light"
                 style={StyleSheet.absoluteFill}
               />
@@ -55,12 +55,12 @@ export default function TabLayout() {
           ),
           tabBarLabelStyle: {
             fontSize: 11,
-            fontWeight: '500' as const,
-            marginTop: 3,
-            letterSpacing: 0.1,
+            fontWeight: '600' as const,
+            marginTop: 4,
+            letterSpacing: 0.2,
           },
           tabBarIconStyle: {
-            marginBottom: -1,
+            marginBottom: 0,
           },
         }}
       >
@@ -70,9 +70,9 @@ export default function TabLayout() {
             title: "Home",
             tabBarIcon: ({ color, focused }) => (
               <Home 
-                size={22} 
+                size={24} 
                 color={color} 
-                strokeWidth={focused ? 2.5 : 2}
+                strokeWidth={focused ? 2.8 : 2.2}
               />
             ),
           }}
@@ -83,9 +83,9 @@ export default function TabLayout() {
             title: "Plan",
             tabBarIcon: ({ color, focused }) => (
               <Calendar 
-                size={22} 
+                size={24} 
                 color={color}
-                strokeWidth={focused ? 2.5 : 2}
+                strokeWidth={focused ? 2.8 : 2.2}
               />
             ),
           }}
@@ -94,7 +94,7 @@ export default function TabLayout() {
           name="ai-placeholder"
           options={{
             title: "",
-            tabBarButton: () => <View style={{ width: 72 }} />,
+            tabBarButton: () => <View style={{ width: 76 }} />,
           }}
         />
         <Tabs.Screen
@@ -103,9 +103,9 @@ export default function TabLayout() {
             title: "Recovery",
             tabBarIcon: ({ color, focused }) => (
               <Activity 
-                size={22} 
+                size={24} 
                 color={color}
-                strokeWidth={focused ? 2.5 : 2}
+                strokeWidth={focused ? 2.8 : 2.2}
               />
             ),
           }}
@@ -116,9 +116,9 @@ export default function TabLayout() {
             title: "Progress",
             tabBarIcon: ({ color, focused }) => (
               <TrendingUp 
-                size={22} 
+                size={24} 
                 color={color}
-                strokeWidth={focused ? 2.5 : 2}
+                strokeWidth={focused ? 2.8 : 2.2}
               />
             ),
           }}
@@ -131,7 +131,7 @@ export default function TabLayout() {
         />
       </Tabs>
       
-      <View style={[styles.reeWrapper, { bottom: Platform.OS === 'ios' ? 46 : 36 }]}>
+      <View style={[styles.reeWrapper, { bottom: Platform.OS === 'ios' ? 48 : 38 }]}>
         <ReeFloatingButton />
       </View>
     </View>
