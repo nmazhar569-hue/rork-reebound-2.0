@@ -8,6 +8,8 @@ import { AppProvider } from "@/contexts/AppContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { HealthProvider } from "@/contexts/HealthContext";
 import { ReeProvider } from "@/contexts/ReeContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { HealthKitProvider } from "@/contexts/HealthKitContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,6 +20,8 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="programs/index" options={{ title: "Programs" }} />
       <Stack.Screen name="programs/builder" options={{ title: "Build Program" }} />
       <Stack.Screen name="programs/edit-today" options={{ title: "Edit for Today" }} />
@@ -35,15 +39,19 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <AuthProvider>
-          <HealthProvider>
-            <AppProvider>
-              <ReeProvider>
-                <RootLayoutNav />
-              </ReeProvider>
-            </AppProvider>
-          </HealthProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <HealthProvider>
+              <HealthKitProvider>
+                <AppProvider>
+                  <ReeProvider>
+                    <RootLayoutNav />
+                  </ReeProvider>
+                </AppProvider>
+              </HealthKitProvider>
+            </HealthProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

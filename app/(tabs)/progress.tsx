@@ -1,15 +1,107 @@
 import { router } from 'expo-router';
-import { ChevronRight, RefreshCw } from 'lucide-react-native';
-import React, { useMemo } from 'react';
+import { ChevronRight, RefreshCw, TrendingUp, Calendar, Dumbbell, Settings } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import { Card, PageHeader, ProgressBar } from '@/components/ui';
+import { BodyDiagram, MuscleGroupId } from '@/components/BodyDiagram';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import colors, { borderRadius, shadows, layout } from '@/constants/colors';
+import { haptics } from '@/utils/haptics';
 
 const CHART_HEIGHT = 180;
 
+// Mock data for muscle-specific progress (replace with real data later)
+const MOCK_MUSCLE_DATA: Record<MuscleGroupId, { 
+  lastWorkout: string; 
+  totalWorkouts: number;
+  avgWeight: number;
+  weightProgress: number;
+  lastExercises: string[];
+}> = {
+  chest: { 
+    lastWorkout: '2 days ago', 
+    totalWorkouts: 12, 
+    avgWeight: 185,
+    weightProgress: 15,
+    lastExercises: ['Bench Press', 'Incline Dumbbell Press', 'Cable Flyes'],
+  },
+  shoulders: { 
+    lastWorkout: '4 days ago', 
+    totalWorkouts: 10,
+    avgWeight: 85,
+    weightProgress: 12,
+    lastExercises: ['Overhead Press', 'Lateral Raises', 'Face Pulls'],
+  },
+  biceps: { 
+    lastWorkout: '3 days ago', 
+    totalWorkouts: 15,
+    avgWeight: 45,
+    weightProgress: 8,
+    lastExercises: ['Barbell Curls', 'Hammer Curls', 'Preacher Curls'],
+  },
+  triceps: { 
+    lastWorkout: '3 days ago', 
+    totalWorkouts: 14,
+    avgWeight: 55,
+    weightProgress: 10,
+    lastExercises: ['Tricep Dips', 'Overhead Extensions', 'Cable Pushdowns'],
+  },
+  abs: { 
+    lastWorkout: '1 day ago', 
+    totalWorkouts: 20,
+    avgWeight: 0,
+    weightProgress: 0,
+    lastExercises: ['Planks', 'Russian Twists', 'Leg Raises'],
+  },
+  obliques: { 
+    lastWorkout: '1 day ago', 
+    totalWorkouts: 18,
+    avgWeight: 35,
+    weightProgress: 5,
+    lastExercises: ['Side Planks', 'Woodchoppers', 'Bicycle Crunches'],
+  },
+  quads: { 
+    lastWorkout: '2 days ago', 
+    totalWorkouts: 16,
+    avgWeight: 225,
+    weightProgress: 20,
+    lastExercises: ['Squats', 'Leg Press', 'Lunges'],
+  },
+  calves: { 
+    lastWorkout: '5 days ago', 
+    totalWorkouts: 8,
+    avgWeight: 135,
+    weightProgress: 7,
+    lastExercises: ['Calf Raises', 'Seated Calf Raises'],
+  },
+  back: { 
+    lastWorkout: '3 days ago', 
+    totalWorkouts: 13,
+    avgWeight: 165,
+    weightProgress: 18,
+    lastExercises: ['Deadlifts', 'Pull-ups', 'Bent-over Rows'],
+  },
+  glutes: { 
+    lastWorkout: '2 days ago', 
+    totalWorkouts: 11,
+    avgWeight: 205,
+    weightProgress: 16,
+    lastExercises: ['Hip Thrusts', 'Bulgarian Split Squats', 'Glute Bridges'],
+  },
+  hamstrings: { 
+    lastWorkout: '4 days ago', 
+    totalWorkouts: 9,
+    avgWeight: 155,
+    weightProgress: 13,
+    lastExercises: ['Romanian Deadlifts', 'Leg Curls', 'Good Mornings'],
+  },
+};
+
 export default function ProgressScreen() {
   const { dailyLogs, workoutPlan } = useApp();
+  const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroupId | null>(null);
+  const [showRetakeConfirm, setShowRetakeConfirm] = useState(false);
 
   const weeklyData = useMemo(() => {
     const now = new Date();
@@ -37,51 +129,40 @@ export default function ProgressScreen() {
     return `You showed up ${weeklyData.completedWorkouts} times this week with ${painTrend} discomfort. ${consistency === 'consistent' ? 'Sustainable progress.' : 'Every session counts.'}`;
   }, [weeklyData]);
 
-  const recoveryStreak = useMemo(() => {
-    const sortedLogs = [...dailyLogs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const recoveryLogs = sortedLogs.filter((l) => l.recoveryCompleted);
+  const handleMuscleSelect = (muscle: MuscleGroupId) => {
+    haptics.medium();
+    setSelectedMuscle(muscle === selectedMuscle ? null : muscle);
+  };
 
-    if (recoveryLogs.length === 0) return 0;
-    const lastDate = recoveryLogs[0].date;
-    if (lastDate !== today && lastDate !== yesterday) return 0;
+  const handleRetakePress = () => {
+    haptics.light();
+    setShowRetakeConfirm(true);
+  };
 
-    let streak = 0;
-    let currentDate = new Date(lastDate);
-    for (const log of recoveryLogs) {
-      if (new Date(log.date).toISOString().split('T')[0] === currentDate.toISOString().split('T')[0]) {
-        streak++;
-        currentDate.setDate(currentDate.getDate() - 1);
-      } else break;
-    }
-    return streak;
-  }, [dailyLogs]);
+  const handleConfirmRetake = () => {
+    setShowRetakeConfirm(false);
+    router.push('/onboarding');
+  };
 
-  const last7Days = useMemo(() => {
-    const days = [];
-    const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(now.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      const log = dailyLogs.find((l) => l.date === dateStr);
-      days.push({
-        date: dateStr,
-        day: date.getDate(),
-        painLevel: log?.painLevel || null,
-        confidenceLevel: log?.confidenceLevel || null,
-        completed: log?.workoutCompleted || false,
-      });
-    }
-    return days;
-  }, [dailyLogs]);
-
+  const muscleData = selectedMuscle ? MOCK_MUSCLE_DATA[selectedMuscle] : null;
   const progressPercentage = weeklyData.totalWorkouts > 0 ? (weeklyData.completedWorkouts / weeklyData.totalWorkouts) * 100 : 0;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <PageHeader title="Progress" subtitle="Your journey, at your pace" />
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <PageHeader title="Progress" subtitle="Track your strength journey" />
+        </View>
+        <TouchableOpacity
+          style={styles.settingsIconButton}
+          onPress={() => {
+            haptics.light();
+            router.push('/settings');
+          }}
+        >
+          <Settings size={22} color={colors.text} />
+        </TouchableOpacity>
+      </View>
 
       <Card style={styles.narrativeCard}>
         <Text style={styles.narrativeText}>{narrative}</Text>
@@ -104,61 +185,92 @@ export default function ProgressScreen() {
         </Card>
       </View>
 
-      <View style={styles.statsGrid}>
-        <Card style={styles.statCard}>
-          <Text style={styles.statLabel}>Avg Confidence</Text>
-          <View style={styles.statValueRow}>
-            <Text style={styles.statValue}>{weeklyData.avgConfidence > 0 ? weeklyData.avgConfidence.toFixed(1) : '-'}</Text>
-            <Text style={styles.statValueSuffix}>/10</Text>
-          </View>
-          <Text style={styles.statNote}>Trust builds gradually</Text>
-        </Card>
-
-        <Card style={styles.statCard}>
-          <Text style={styles.statLabel}>Recovery Streak</Text>
-          <Text style={styles.statValue}>{recoveryStreak} <Text style={styles.statValueSmall}>days</Text></Text>
-          <Text style={styles.statNote}>Days of self-care</Text>
-        </Card>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Muscle Group Progress</Text>
+        <Text style={styles.sectionSubtitle}>
+          Tap a muscle to see detailed statistics
+        </Text>
       </View>
 
-      {[
-        { title: 'Pain Level (Last 7 Days)', dataKey: 'painLevel' as const, activeColor: colors.primary },
-        { title: 'Confidence (Last 7 Days)', dataKey: 'confidenceLevel' as const, activeColor: colors.accent },
-      ].map((chart) => (
-        <Card key={chart.title} style={styles.chartCard}>
-          <Text style={styles.chartTitle}>{chart.title}</Text>
-          <View style={styles.chart}>
-            <View style={styles.chartYAxis}>
-              <Text style={styles.yAxisLabel}>10</Text>
-              <Text style={styles.yAxisLabel}>5</Text>
-              <Text style={styles.yAxisLabel}>0</Text>
+      <Card style={styles.bodyDiagramCard}>
+        <BodyDiagram 
+          selectedMuscle={selectedMuscle}
+          onMuscleSelect={handleMuscleSelect}
+        />
+      </Card>
+
+      {selectedMuscle && muscleData && (
+        <Card style={styles.muscleDetailsCard}>
+          <View style={styles.muscleDetailsHeader}>
+            <View>
+              <Text style={styles.muscleDetailsTitle}>
+                {selectedMuscle.charAt(0).toUpperCase() + selectedMuscle.slice(1)}
+              </Text>
+              <Text style={styles.muscleDetailsSubtitle}>Detailed Progress</Text>
             </View>
-            <View style={styles.chartContent}>
-              <View style={styles.chartGrid}>
-                {[0, 1, 2].map((i) => <View key={i} style={styles.gridLine} />)}
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setSelectedMuscle(null)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.muscleStatsGrid}>
+            <View style={styles.muscleStat}>
+              <View style={styles.muscleStatIcon}>
+                <Calendar size={20} color={colors.primary} />
               </View>
-              <View style={styles.barsContainer}>
-                {last7Days.map((day) => (
-                  <View key={day.date} style={styles.barColumn}>
-                    <View style={[
-                      styles.bar,
-                      day[chart.dataKey] !== null && {
-                        height: Math.max(4, ((day[chart.dataKey] ?? 0) / 10) * (CHART_HEIGHT - 40)),
-                        backgroundColor: day.completed ? chart.activeColor : colors.textTertiary,
-                      },
-                    ]} />
-                    <Text style={styles.barLabel}>{day.day}</Text>
-                  </View>
-                ))}
-              </View>
+              <Text style={styles.muscleStatLabel}>Last Workout</Text>
+              <Text style={styles.muscleStatValue}>{muscleData.lastWorkout}</Text>
             </View>
+
+            <View style={styles.muscleStat}>
+              <View style={styles.muscleStatIcon}>
+                <Dumbbell size={20} color={colors.accent} />
+              </View>
+              <Text style={styles.muscleStatLabel}>Total Sessions</Text>
+              <Text style={styles.muscleStatValue}>{muscleData.totalWorkouts}</Text>
+            </View>
+
+            {muscleData.avgWeight > 0 && (
+              <View style={styles.muscleStat}>
+                <View style={styles.muscleStatIcon}>
+                  <TrendingUp size={20} color={colors.success} />
+                </View>
+                <Text style={styles.muscleStatLabel}>Avg Weight</Text>
+                <Text style={styles.muscleStatValue}>{muscleData.avgWeight} lb</Text>
+              </View>
+            )}
+
+            {muscleData.weightProgress > 0 && (
+              <View style={styles.muscleStat}>
+                <View style={styles.muscleStatIcon}>
+                  <TrendingUp size={20} color={colors.success} />
+                </View>
+                <Text style={styles.muscleStatLabel}>Progress</Text>
+                <Text style={[styles.muscleStatValue, { color: colors.success }]}>
+                  +{muscleData.weightProgress}%
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.recentExercises}>
+            <Text style={styles.recentExercisesTitle}>Recent Exercises</Text>
+            {muscleData.lastExercises.map((exercise, index) => (
+              <View key={index} style={styles.exerciseItem}>
+                <View style={styles.exerciseDot} />
+                <Text style={styles.exerciseText}>{exercise}</Text>
+              </View>
+            ))}
           </View>
         </Card>
-      ))}
+      )}
 
       <View style={styles.settingsSection}>
-        <Text style={styles.settingsTitle}>Settings</Text>
-        <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/onboarding')}>
+        <Text style={styles.settingsSectionTitle}>Settings</Text>
+        <TouchableOpacity style={styles.settingsButton} onPress={handleRetakePress}>
           <View style={styles.settingsIcon}>
             <RefreshCw size={22} color={colors.primary} />
           </View>
@@ -170,6 +282,17 @@ export default function ProgressScreen() {
         </TouchableOpacity>
       </View>
 
+      <ConfirmDialog
+        visible={showRetakeConfirm}
+        title="Retake Assessment?"
+        message="This will reset your profile and take you back to the onboarding process. Your progress data will be preserved."
+        confirmText="Retake"
+        cancelText="Cancel"
+        type="warning"
+        onConfirm={handleConfirmRetake}
+        onCancel={() => setShowRetakeConfirm(false)}
+      />
+
       <View style={styles.bottomSpacer} />
     </ScrollView>
   );
@@ -178,34 +301,159 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: layout.screenPadding, paddingTop: layout.screenPaddingTop, paddingBottom: 40 },
-  narrativeCard: { marginBottom: 18 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  settingsIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    ...shadows.soft,
+  },
+  narrativeCard: { marginBottom: 20 },
   narrativeText: { fontSize: 16, color: colors.text, lineHeight: 25, fontWeight: '500' as const, textAlign: 'center' },
-  statsGrid: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  statsGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   statCard: { flex: 1, padding: 18 },
   statLabel: { fontSize: 11, color: colors.textTertiary, marginBottom: 8, fontWeight: '600' as const, textTransform: 'uppercase', letterSpacing: 0.6 },
   statValueRow: { flexDirection: 'row', alignItems: 'baseline' },
-  statValue: { fontSize: 24, fontWeight: '700' as const, color: colors.text },
-  statValueSmall: { fontSize: 14, fontWeight: '400' as const, color: colors.textSecondary },
+  statValue: { fontSize: 28, fontWeight: '800' as const, color: colors.text, letterSpacing: -0.5 },
   statValueSuffix: { fontSize: 14, color: colors.textTertiary, marginLeft: 2 },
-  statNote: { fontSize: 12, color: colors.textTertiary, marginTop: 5 },
-  chartCard: { marginBottom: 18 },
-  chartTitle: { fontSize: 16, fontWeight: '600' as const, color: colors.text, marginBottom: 18 },
-  chart: { flexDirection: 'row', height: CHART_HEIGHT },
-  chartYAxis: { width: 26, justifyContent: 'space-between', paddingVertical: 20 },
-  yAxisLabel: { fontSize: 11, color: colors.textTertiary },
-  chartContent: { flex: 1, position: 'relative' },
-  chartGrid: { position: 'absolute', top: 20, left: 0, right: 0, bottom: 20, justifyContent: 'space-between' },
-  gridLine: { height: 1, backgroundColor: colors.borderSubtle },
-  barsContainer: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-around', paddingHorizontal: 8, paddingTop: 20, paddingBottom: 20 },
-  barColumn: { alignItems: 'center', justifyContent: 'flex-end', flex: 1 },
-  bar: { width: 22, backgroundColor: colors.textTertiary, borderRadius: borderRadius.full, minHeight: 4 },
-  barLabel: { fontSize: 11, color: colors.textTertiary, marginTop: 8, fontWeight: '500' as const },
-  settingsSection: { marginTop: 6, marginBottom: 18 },
-  settingsTitle: { fontSize: 16, fontWeight: '600' as const, color: colors.text, marginBottom: 12 },
-  settingsButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, padding: 16, borderRadius: borderRadius.xxl, ...shadows.soft },
-  settingsIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryMuted, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  statNote: { fontSize: 12, color: colors.textTertiary, marginTop: 6, fontWeight: '500' as const },
+  sectionHeader: {
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '800' as const,
+    color: colors.text,
+    marginBottom: 6,
+    letterSpacing: -0.4,
+  },
+  sectionSubtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    fontWeight: '500' as const,
+  },
+  bodyDiagramCard: {
+    paddingVertical: 32,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  muscleDetailsCard: {
+    marginBottom: 20,
+  },
+  muscleDetailsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  muscleDetailsTitle: {
+    fontSize: 24,
+    fontWeight: '800' as const,
+    color: colors.text,
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  muscleDetailsSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500' as const,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceDim,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 18,
+    color: colors.textSecondary,
+    fontWeight: '600' as const,
+  },
+  muscleStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  muscleStat: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: colors.surfaceDim,
+    borderRadius: borderRadius.xl,
+    padding: 16,
+    alignItems: 'center',
+  },
+  muscleStatIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    ...shadows.soft,
+  },
+  muscleStatLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 6,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  muscleStatValue: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: colors.text,
+    letterSpacing: -0.3,
+  },
+  recentExercises: {
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  recentExercisesTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginBottom: 14,
+    letterSpacing: -0.2,
+  },
+  exerciseItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 12,
+  },
+  exerciseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  exerciseText: {
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '500' as const,
+  },
+  settingsSection: { marginTop: 12, marginBottom: 18 },
+  settingsSectionTitle: { fontSize: 18, fontWeight: '700' as const, color: colors.text, marginBottom: 14, letterSpacing: -0.2 },
+  settingsButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, padding: 18, borderRadius: borderRadius.xxl, ...shadows.medium },
+  settingsIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primaryMuted, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   settingsContent: { flex: 1 },
-  settingsLabel: { fontSize: 16, fontWeight: '600' as const, color: colors.text, marginBottom: 3 },
-  settingsDescription: { fontSize: 13, color: colors.textSecondary },
+  settingsLabel: { fontSize: 17, fontWeight: '700' as const, color: colors.text, marginBottom: 4, letterSpacing: -0.2 },
+  settingsDescription: { fontSize: 14, color: colors.textSecondary, fontWeight: '500' as const },
   bottomSpacer: { height: layout.tabBarHeight },
 });
