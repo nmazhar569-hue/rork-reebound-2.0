@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Play, CheckCircle, Flame, Trophy, ChevronLeft, ChevronRight, Footprints, Moon, Heart, TrendingUp, Pause, RotateCcw } from 'lucide-react-native';
-import { useFocusEffect } from 'expo-router';
+import { Play, CheckCircle, Flame, Trophy, ChevronLeft, ChevronRight, Footprints, Moon, Heart, TrendingUp, Pause, RotateCcw, Activity, Zap, AlertCircle } from 'lucide-react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { recoveryRoutines } from '@/constants/workoutTemplates';
@@ -10,16 +10,34 @@ import { useHealth } from '@/contexts/HealthContext';
 import { useRee } from '@/contexts/ReeContext';
 import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
+import { PainSlider } from '@/components/PainSlider';
+
+const RECOVERY_ORANGE = '#FF7A50';
+const RECOVERY_ORANGE_MUTED = 'rgba(255, 122, 80, 0.15)';
+const RECOVERY_ORANGE_GLOW = 'rgba(255, 122, 80, 0.3)';
 
 const TYPE_BADGE_CONFIG = {
   warmup: { bg: liquidGlass.status.warningMuted, color: liquidGlass.status.warning, label: 'Warm-Up' },
-  cooldown: { bg: liquidGlass.accent.muted, color: liquidGlass.accent.primary, label: 'Cool-Down' },
+  cooldown: { bg: RECOVERY_ORANGE_MUTED, color: RECOVERY_ORANGE, label: 'Cool-Down' },
   mobility: { bg: 'rgba(255, 107, 157, 0.15)', color: '#FF6B9D', label: 'Mobility' },
 } as const;
 
-function GlassCard({ children, style }: { children: React.ReactNode; style?: any }) {
+const INJURY_LABELS: Record<string, string> = {
+  acl: 'ACL Recovery',
+  meniscus: 'Meniscus Care',
+  patella: 'Patellar Tendonitis',
+  general_pain: 'General Knee Pain',
+  post_surgery: 'Post-Surgery Rehab',
+};
+
+function GlassCard({ children, style, variant }: { children: React.ReactNode; style?: object; variant?: 'recovery' | 'default' }) {
+  const isRecovery = variant === 'recovery';
   return (
-    <View style={[styles.glassCard, style]}>
+    <View style={[
+      styles.glassCard, 
+      isRecovery && styles.glassCardRecovery,
+      style
+    ]}>
       {children}
     </View>
   );
@@ -34,7 +52,8 @@ function GlassProgressBar({ progress }: { progress: number }) {
 }
 
 export default function RecoveryScreen() {
-  const { getTodayWorkout, getTodayLog, logWorkout, dailyLogs, getTodayReadiness } = useApp();
+  const router = useRouter();
+  const { getTodayWorkout, getTodayLog, logWorkout, dailyLogs, getTodayReadiness, logReadiness, userProfile, getInjuryContext, getCurrentPainGuidance } = useApp();
   const { isConnected: healthConnected, getTodaySteps, getWeeklyStepsAverage, calculateReadinessFactors } = useHealth();
   const { updateScreenContext, markConceptTaught } = useRee();
   const [activeRoutine, setActiveRoutine] = useState<string | null>(null);
@@ -42,9 +61,15 @@ export default function RecoveryScreen() {
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [localPainLevel, setLocalPainLevel] = useState<number | null>(null);
 
   const todayLog = getTodayLog();
+  const todayReadiness = getTodayReadiness();
   const activeRoutineData = recoveryRoutines.find((r) => r.id === activeRoutine);
+  const injuryContext = getInjuryContext();
+  const painGuidance = getCurrentPainGuidance();
+
+  const currentPainLevel = localPainLevel ?? todayReadiness?.painLevel ?? 0;
 
   React.useEffect(() => {
     if (activeRoutine && activeRoutineData?.steps[currentStep]) {
@@ -95,7 +120,6 @@ export default function RecoveryScreen() {
     }, [updateScreenContext, markConceptTaught])
   );
 
-  const todayReadiness = getTodayReadiness();
   const readinessFactors = useMemo(() => {
     return calculateReadinessFactors(todayReadiness?.painLevel, todayReadiness?.confidence);
   }, [calculateReadinessFactors, todayReadiness]);
@@ -107,13 +131,16 @@ export default function RecoveryScreen() {
     const todayWorkout = getTodayWorkout();
     const log = getTodayLog();
 
+    if (currentPainLevel > 5) {
+      return { routine: recoveryRoutines.find((r) => r.type === 'mobility'), reason: 'Pain Management' };
+    }
     if (readinessFactors.overallScore < 50) {
       return { routine: recoveryRoutines.find((r) => r.type === 'mobility'), reason: 'Recovery Focus' };
     }
     if (log?.workoutCompleted) return { routine: recoveryRoutines.find((r) => r.type === 'cooldown'), reason: 'Post-Workout Cool-Down' };
     if (todayWorkout) return { routine: recoveryRoutines.find((r) => r.type === 'warmup'), reason: 'Pre-Workout Warm-Up' };
     return { routine: recoveryRoutines.find((r) => r.type === 'mobility'), reason: 'Rest Day Flow' };
-  }, [getTodayWorkout, getTodayLog, readinessFactors.overallScore]);
+  }, [getTodayWorkout, getTodayLog, readinessFactors.overallScore, currentPainLevel]);
 
   const recoveryStreak = useMemo(() => {
     const sortedLogs = [...dailyLogs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -135,6 +162,18 @@ export default function RecoveryScreen() {
     }
     return streak;
   }, [dailyLogs]);
+
+  const handlePainUpdate = useCallback(async (newPainLevel: number) => {
+    setLocalPainLevel(newPainLevel);
+    haptics.soft();
+    
+    const today = new Date().toISOString().split('T')[0];
+    await logReadiness({
+      date: today,
+      painLevel: newPainLevel,
+      confidence: todayReadiness?.confidence || 'medium',
+    });
+  }, [logReadiness, todayReadiness]);
 
   const handlePrevStep = useCallback(() => {
     if (currentStep > 0) {
@@ -160,7 +199,7 @@ export default function RecoveryScreen() {
         date: new Date().toISOString().split('T')[0],
         workoutCompleted: false,
         recoveryCompleted: true,
-        painLevel: todayLog?.painLevel || 0,
+        painLevel: todayLog?.painLevel || currentPainLevel,
         confidenceLevel: todayLog?.confidenceLevel || 0,
         notes: `Completed ${activeRoutineData.title}`,
       });
@@ -168,13 +207,18 @@ export default function RecoveryScreen() {
       setCurrentStep(0);
       setCompletedSteps([]);
     }
-  }, [activeRoutineData, currentStep, todayLog, logWorkout, completedSteps]);
+  }, [activeRoutineData, currentStep, todayLog, logWorkout, completedSteps, currentPainLevel]);
 
   const handleBack = useCallback(() => {
     setActiveRoutine(null);
     setCurrentStep(0);
     setCompletedSteps([]);
   }, []);
+
+  const navigateToGuidedSession = useCallback((routineId: string) => {
+    haptics.soft();
+    router.push(`/active-recovery?routineId=${routineId}`);
+  }, [router]);
 
   if (activeRoutine && activeRoutineData) {
     const currentStepData = activeRoutineData.steps[currentStep];
@@ -184,7 +228,7 @@ export default function RecoveryScreen() {
       <View style={styles.container}>
         <View style={styles.routineHeader}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <ChevronLeft size={20} color={liquidGlass.accent.primary} />
+            <ChevronLeft size={20} color={RECOVERY_ORANGE} />
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
           <Text style={styles.routineTitle}>{activeRoutineData.title}</Text>
@@ -203,8 +247,8 @@ export default function RecoveryScreen() {
             <View style={styles.controlsContainer}>
               <View style={styles.timerRow}>
                 <TouchableOpacity style={styles.timerButton} onPress={toggleTimer}>
-                  <LinearGradient colors={liquidGlass.gradients.button} style={styles.timerButtonGradient}>
-                    {isTimerRunning ? <Pause size={24} color={liquidGlass.text.inverse} /> : <Play size={24} color={liquidGlass.text.inverse} fill={liquidGlass.text.inverse} />}
+                  <LinearGradient colors={[RECOVERY_ORANGE, '#E55A30']} style={styles.timerButtonGradient}>
+                    {isTimerRunning ? <Pause size={24} color="#FFF" /> : <Play size={24} color="#FFF" fill="#FFF" />}
                     <Text style={styles.timerButtonText}>{isTimerRunning ? 'Pause' : timeLeft === 0 ? 'Restart' : 'Start'}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -224,9 +268,9 @@ export default function RecoveryScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.nextStepButton} onPress={handleNextStep}>
-                  <LinearGradient colors={liquidGlass.gradients.button} style={styles.nextStepGradient}>
+                  <LinearGradient colors={[RECOVERY_ORANGE, '#E55A30']} style={styles.nextStepGradient}>
                     <Text style={styles.nextStepButtonText}>{currentStep < activeRoutineData.steps.length - 1 ? 'Next Step' : 'Complete'}</Text>
-                    <ChevronRight size={20} color={liquidGlass.text.inverse} />
+                    <ChevronRight size={20} color="#FFF" />
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -241,7 +285,7 @@ export default function RecoveryScreen() {
                 index === currentStep && styles.stepIndicatorActive,
               ]}>
                 {completedSteps.includes(step.id) ? (
-                  <CheckCircle size={18} color={liquidGlass.status.success} />
+                  <CheckCircle size={18} color={RECOVERY_ORANGE} />
                 ) : (
                   <Text style={[styles.stepIndicatorText, index === currentStep && styles.stepIndicatorTextActive]}>{index + 1}</Text>
                 )}
@@ -256,21 +300,84 @@ export default function RecoveryScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Recovery</Text>
-        <Text style={styles.subtitle}>Movement that supports your body</Text>
+        <Text style={styles.title}>Recovery Studio</Text>
+        <Text style={styles.subtitle}>Listen to your body</Text>
       </View>
 
       {recoveryStreak > 0 && (
         <View style={styles.streakContainer}>
-          <Trophy size={16} color={liquidGlass.status.warning} />
+          <Trophy size={16} color={RECOVERY_ORANGE} />
           <Text style={styles.streakText}>{recoveryStreak} days of care</Text>
         </View>
       )}
 
+      <GlassCard style={styles.statusCard} variant="recovery">
+        <View style={styles.statusHeader}>
+          <Activity color={RECOVERY_ORANGE} size={20} />
+          <Text style={styles.statusTitle}>
+            {userProfile?.injuryType ? INJURY_LABELS[userProfile.injuryType] || 'Knee Status' : 'Knee Status'}
+          </Text>
+          <View style={[
+            styles.statusBadge, 
+            { backgroundColor: currentPainLevel > 5 ? liquidGlass.status.dangerMuted : currentPainLevel > 3 ? liquidGlass.status.warningMuted : liquidGlass.status.successMuted }
+          ]}>
+            <Text style={[
+              styles.statusBadgeText,
+              { color: currentPainLevel > 5 ? liquidGlass.status.danger : currentPainLevel > 3 ? liquidGlass.status.warning : liquidGlass.status.success }
+            ]}>
+              {currentPainLevel > 5 ? 'Elevated' : currentPainLevel > 3 ? 'Moderate' : 'Good'}
+            </Text>
+          </View>
+        </View>
+        
+        <PainSlider 
+          initialValue={currentPainLevel} 
+          onValueChange={handlePainUpdate} 
+        />
+        
+        {painGuidance && (
+          <View style={styles.adviceContainer}>
+            <AlertCircle size={14} color={RECOVERY_ORANGE} />
+            <Text style={styles.adviceText}>
+              {currentPainLevel > 5 
+                ? "Pain is elevated. Focus on gentle isometric exercises today." 
+                : currentPainLevel > 3
+                ? "Moderate discomfort. Proceed with caution on high-load exercises."
+                : "Pain is managed. You're cleared for your planned routine."}
+            </Text>
+          </View>
+        )}
+      </GlassCard>
+
+      <Text style={styles.sectionHeader}>Quick Sessions</Text>
+      <View style={styles.quickGrid}>
+        {[
+          { key: 'warmup', icon: Zap, label: 'Warm-Up', color: liquidGlass.status.warning },
+          { key: 'cooldown', icon: Moon, label: 'Cool-Down', color: RECOVERY_ORANGE },
+          { key: 'mobility', icon: Activity, label: 'Mobility', color: '#FF6B9D' },
+          { key: 'rehab', icon: Heart, label: 'Rehab', color: liquidGlass.status.success },
+        ].map((item) => {
+          const routine = recoveryRoutines.find(r => r.type === item.key as 'warmup' | 'cooldown' | 'mobility');
+          return (
+            <TouchableOpacity 
+              key={item.key} 
+              style={styles.quickGridItem}
+              onPress={() => routine && setActiveRoutine(routine.id)}
+              disabled={!routine}
+            >
+              <View style={[styles.quickIconContainer, { backgroundColor: item.color + '20' }]}>
+                <item.icon color={item.color} size={22} />
+              </View>
+              <Text style={styles.quickGridText}>{item.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {healthConnected && (
         <GlassCard style={styles.healthInsightsCard}>
           <View style={styles.healthInsightsHeader}>
-            <Heart size={16} color={liquidGlass.accent.primary} />
+            <Heart size={16} color={RECOVERY_ORANGE} />
             <Text style={styles.healthInsightsTitle}>Today&apos;s Readiness</Text>
             <View style={[styles.readinessScoreBadge, { 
               backgroundColor: readinessFactors.overallScore >= 70 ? liquidGlass.status.successMuted : 
@@ -317,12 +424,12 @@ export default function RecoveryScreen() {
 
       {recommendedRoutine.routine && (
         <View style={styles.recommendedSection}>
-          <View style={styles.sectionHeader}>
-            <Flame size={18} color={liquidGlass.accent.primary} fill={liquidGlass.accent.primary} />
+          <View style={styles.sectionHeaderRow}>
+            <Flame size={18} color={RECOVERY_ORANGE} fill={RECOVERY_ORANGE} />
             <Text style={styles.sectionTitle}>Recommended Today</Text>
           </View>
 
-          <GlassCard style={styles.recommendedCard}>
+          <GlassCard style={styles.recommendedCard} variant="recovery">
             <View style={styles.routineCardHeader}>
               <View style={styles.typeBadgeRecommended}>
                 <Text style={styles.typeBadgeTextRecommended}>{recommendedRoutine.reason}</Text>
@@ -332,8 +439,8 @@ export default function RecoveryScreen() {
             <Text style={styles.routineCardTitle}>{recommendedRoutine.routine.title}</Text>
             <Text style={styles.stepsCount}>{recommendedRoutine.routine.steps.length} steps</Text>
             <TouchableOpacity style={styles.primaryButton} onPress={() => setActiveRoutine(recommendedRoutine.routine!.id)}>
-              <LinearGradient colors={liquidGlass.gradients.button} style={styles.primaryButtonGradient}>
-                <Play size={18} color={liquidGlass.text.inverse} fill={liquidGlass.text.inverse} />
+              <LinearGradient colors={[RECOVERY_ORANGE, '#E55A30']} style={styles.primaryButtonGradient}>
+                <Play size={18} color="#FFF" fill="#FFF" />
                 <Text style={styles.primaryButtonText}>Start Now</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -356,7 +463,7 @@ export default function RecoveryScreen() {
               <Text style={styles.routineCardTitle}>{routine.title}</Text>
               <Text style={styles.stepsCount}>{routine.steps.length} steps</Text>
               <TouchableOpacity style={styles.startRoutineButton} onPress={() => setActiveRoutine(routine.id)}>
-                <Play size={18} color={liquidGlass.accent.primary} />
+                <Play size={18} color={RECOVERY_ORANGE} />
                 <Text style={styles.startRoutineButtonText}>Start</Text>
               </TouchableOpacity>
             </GlassCard>
@@ -383,8 +490,45 @@ const styles = StyleSheet.create({
     padding: 20,
     ...glassShadows.soft,
   },
-  streakContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: liquidGlass.status.warningMuted, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 50, marginBottom: 24, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(255, 184, 77, 0.3)' },
-  streakText: { fontSize: 14, color: liquidGlass.status.warning, fontWeight: '600' as const },
+  glassCardRecovery: {
+    borderColor: RECOVERY_ORANGE_GLOW,
+  },
+  streakContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: RECOVERY_ORANGE_MUTED, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 50, marginBottom: 24, alignSelf: 'flex-start', borderWidth: 1, borderColor: RECOVERY_ORANGE_GLOW },
+  streakText: { fontSize: 14, color: RECOVERY_ORANGE, fontWeight: '600' as const },
+  
+  statusCard: { marginBottom: 24 },
+  statusHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  statusTitle: { flex: 1, fontSize: 16, fontWeight: '600' as const, color: liquidGlass.text.primary },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 50 },
+  statusBadgeText: { fontSize: 12, fontWeight: '600' as const },
+  adviceContainer: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: liquidGlass.surface.glassDark, borderRadius: 14, padding: 14, marginTop: 12 },
+  adviceText: { flex: 1, color: liquidGlass.text.secondary, fontSize: 14, lineHeight: 20 },
+  
+  sectionHeader: { fontSize: 18, fontWeight: '700' as const, color: liquidGlass.text.primary, marginBottom: 14 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  sectionTitle: { fontSize: 18, fontWeight: '700' as const, color: liquidGlass.text.primary },
+  
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
+  quickGridItem: { 
+    width: '47%', 
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    padding: 16,
+    alignItems: 'center',
+    gap: 10,
+    ...glassShadows.soft,
+  },
+  quickIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickGridText: { color: liquidGlass.text.primary, fontSize: 14, fontWeight: '600' as const },
+  
   healthInsightsCard: { marginBottom: 22 },
   healthInsightsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   healthInsightsTitle: { flex: 1, fontSize: 15, fontWeight: '600' as const, color: liquidGlass.text.primary },
@@ -398,55 +542,53 @@ const styles = StyleSheet.create({
   insightsContainer: { backgroundColor: liquidGlass.surface.glassDark, borderRadius: 14, padding: 12, gap: 6 },
   insightText: { fontSize: 13, color: liquidGlass.text.secondary, lineHeight: 19 },
   recommendedSection: { marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  sectionTitle: { fontSize: 18, fontWeight: '700' as const, color: liquidGlass.text.primary },
   recommendedCard: {},
   routinesList: { gap: 12, marginTop: 6 },
   routineCard: {},
   routineCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   typeBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50 },
-  typeBadgeRecommended: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50, backgroundColor: liquidGlass.accent.muted },
-  typeBadgeTextRecommended: { fontSize: 12, fontWeight: '600' as const, color: liquidGlass.accent.primary },
+  typeBadgeRecommended: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50, backgroundColor: RECOVERY_ORANGE_MUTED },
+  typeBadgeTextRecommended: { fontSize: 12, fontWeight: '600' as const, color: RECOVERY_ORANGE },
   typeBadgeText: { fontSize: 12, fontWeight: '600' as const },
   duration: { fontSize: 13, fontWeight: '600' as const, color: liquidGlass.text.tertiary },
   routineCardTitle: { fontSize: 17, fontWeight: '600' as const, color: liquidGlass.text.primary, marginBottom: 5 },
   stepsCount: { fontSize: 14, color: liquidGlass.text.secondary, marginBottom: 16 },
   primaryButton: { borderRadius: 50, overflow: 'hidden' },
   primaryButtonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 50 },
-  primaryButtonText: { fontSize: 15, fontWeight: '600' as const, color: liquidGlass.text.inverse },
-  startRoutineButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 50, backgroundColor: liquidGlass.accent.muted, borderWidth: 1, borderColor: liquidGlass.border.glass },
-  startRoutineButtonText: { fontSize: 15, fontWeight: '600' as const, color: liquidGlass.accent.primary },
+  primaryButtonText: { fontSize: 15, fontWeight: '600' as const, color: '#FFF' },
+  startRoutineButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 50, backgroundColor: RECOVERY_ORANGE_MUTED, borderWidth: 1, borderColor: RECOVERY_ORANGE_GLOW },
+  startRoutineButtonText: { fontSize: 15, fontWeight: '600' as const, color: RECOVERY_ORANGE },
   allRoutinesTitle: { fontSize: 18, fontWeight: '700' as const, color: liquidGlass.text.primary, marginBottom: 14 },
-  routineHeader: { backgroundColor: liquidGlass.surface.card, padding: 22, paddingTop: 60, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, borderWidth: 1, borderColor: liquidGlass.border.glass, ...glassShadows.medium, zIndex: 10 },
+  routineHeader: { backgroundColor: liquidGlass.surface.card, padding: 22, paddingTop: 60, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, borderWidth: 1, borderColor: RECOVERY_ORANGE_GLOW, ...glassShadows.medium, zIndex: 10 },
   backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 4 },
-  backButtonText: { fontSize: 15, color: liquidGlass.accent.primary, fontWeight: '600' as const },
+  backButtonText: { fontSize: 15, color: RECOVERY_ORANGE, fontWeight: '600' as const },
   routineTitle: { fontSize: 22, fontWeight: '700' as const, color: liquidGlass.text.primary, marginBottom: 4, letterSpacing: -0.4 },
   progressText: { fontSize: 14, color: liquidGlass.text.secondary, fontWeight: '500' as const, marginBottom: 14 },
   progressBarContainer: { height: 6, backgroundColor: liquidGlass.surface.glassDark, borderRadius: 3, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: liquidGlass.accent.primary, borderRadius: 3 },
+  progressBarFill: { height: '100%', backgroundColor: RECOVERY_ORANGE, borderRadius: 3 },
   stepContent: { padding: 20, flexGrow: 1, justifyContent: 'center' },
   stepCard: { marginBottom: 28, alignItems: 'center' },
   stepInstruction: { fontSize: 20, color: liquidGlass.text.primary, lineHeight: 30, marginBottom: 24, textAlign: 'center', fontWeight: '600' as const },
-  timerContainer: { alignItems: 'center', paddingVertical: 22, paddingHorizontal: 36, backgroundColor: liquidGlass.accent.muted, borderRadius: 24, marginBottom: 20, width: '100%', borderWidth: 1, borderColor: liquidGlass.border.glass },
+  timerContainer: { alignItems: 'center', paddingVertical: 22, paddingHorizontal: 36, backgroundColor: RECOVERY_ORANGE_MUTED, borderRadius: 24, marginBottom: 20, width: '100%', borderWidth: 1, borderColor: RECOVERY_ORANGE_GLOW },
   timerLabel: { fontSize: 11, color: liquidGlass.text.tertiary, marginBottom: 6, textTransform: 'uppercase' as const, letterSpacing: 1, fontWeight: '600' as const },
-  timerValue: { fontSize: 44, fontWeight: '700' as const, color: liquidGlass.accent.primary, fontVariant: ['tabular-nums'] },
+  timerValue: { fontSize: 44, fontWeight: '700' as const, color: RECOVERY_ORANGE, fontVariant: ['tabular-nums'] },
   controlsContainer: { width: '100%', gap: 16 },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   timerButton: { flex: 1, borderRadius: 50, overflow: 'hidden' },
   timerButtonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 56, borderRadius: 50 },
-  timerButtonText: { fontSize: 17, fontWeight: '600' as const, color: liquidGlass.text.inverse },
+  timerButtonText: { fontSize: 17, fontWeight: '600' as const, color: '#FFF' },
   resetButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: liquidGlass.surface.glassDark, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: liquidGlass.border.glassLight },
   navigationRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   navButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: liquidGlass.surface.glassDark, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: liquidGlass.border.glassLight },
   navButtonDisabled: { opacity: 0.5 },
   nextStepButton: { flex: 1, borderRadius: 50, overflow: 'hidden' },
   nextStepGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 56, borderRadius: 50 },
-  nextStepButtonText: { fontSize: 17, fontWeight: '600' as const, color: liquidGlass.text.inverse },
+  nextStepButtonText: { fontSize: 17, fontWeight: '600' as const, color: '#FFF' },
   stepsOverview: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   stepIndicator: { width: 38, height: 38, borderRadius: 19, backgroundColor: liquidGlass.surface.glassDark, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: liquidGlass.border.glassLight },
-  stepIndicatorCompleted: { backgroundColor: liquidGlass.status.successMuted, borderColor: liquidGlass.status.success },
-  stepIndicatorActive: { backgroundColor: liquidGlass.accent.primary, borderColor: liquidGlass.accent.primary, transform: [{ scale: 1.08 }] },
+  stepIndicatorCompleted: { backgroundColor: RECOVERY_ORANGE_MUTED, borderColor: RECOVERY_ORANGE },
+  stepIndicatorActive: { backgroundColor: RECOVERY_ORANGE, borderColor: RECOVERY_ORANGE, transform: [{ scale: 1.08 }] },
   stepIndicatorText: { fontSize: 14, fontWeight: '600' as const, color: liquidGlass.text.secondary },
-  stepIndicatorTextActive: { color: liquidGlass.text.inverse },
+  stepIndicatorTextActive: { color: '#FFF' },
   bottomSpacer: { height: glassLayout.tabBarHeight },
 });
