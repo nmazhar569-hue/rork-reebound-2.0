@@ -423,8 +423,21 @@ export interface FoodEntry {
   protein?: number;
   carbs?: number;
   fats?: number;
+  fiber?: number;
+  sugar?: number;
   tags?: string[]; // 'iron', 'calcium', 'fiber', etc.
   timestamp: string;
+  inflammationScore?: number; // -2 (anti-inflammatory) to +2 (pro-inflammatory)
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'pre_workout' | 'post_workout';
+}
+
+export type WorkoutIntensityDay = 'rest' | 'light' | 'moderate' | 'high' | 'intense';
+
+export interface MacroTargets {
+  protein: number;
+  carbs: number;
+  fats: number;
+  calories: number;
 }
 
 export interface NutritionLog {
