@@ -1,5 +1,5 @@
 import { router, useRouter, useFocusEffect } from 'expo-router';
-import { Bell, ChevronRight, Utensils, Activity, Play, Sparkles, Moon, Heart, Calendar, ArrowRight, User } from 'lucide-react-native';
+import { Bell, ChevronRight, Utensils, Activity, Play, Sparkles, Moon, Heart, Calendar, ArrowRight, User, Star } from 'lucide-react-native';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -56,7 +56,7 @@ function GlassCard({ children, style, onPress }: { children: React.ReactNode; st
 }
 
 export default function HomeScreen() {
-  const { userProfile, getTodayWorkout, getTodayReadiness, logReadiness, isLoading, getReturnStatus, recordActivity, dailyLogs, getTodayLog } = useApp();
+  const { userProfile, getTodayWorkout, getTodayReadiness, logReadiness, isLoading, getReturnStatus, recordActivity, dailyLogs, getTodayLog, userPoints } = useApp();
   const { updateScreenContext, refreshHomeInsight } = useRee();
   const todayWorkout = getTodayWorkout();
   const todayReadiness = getTodayReadiness();
@@ -261,6 +261,10 @@ export default function HomeScreen() {
                 {userProfile?.questionnaireProfile?.preferredName || 'Athlete'}
               </Text>
             </View>
+          </View>
+          <View style={styles.pointsBadge}>
+            <Star size={14} color="#CCFF00" fill="#CCFF00" />
+            <Text style={styles.pointsText}>{userPoints}</Text>
           </View>
           <TouchableOpacity 
             style={styles.notificationBtn} 
@@ -551,6 +555,22 @@ const styles = StyleSheet.create({
     color: liquidGlass.text.primary,
     marginBottom: 24,
     letterSpacing: -0.5,
+  },
+  pointsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(204, 255, 0, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(204, 255, 0, 0.3)',
+  },
+  pointsText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#CCFF00',
   },
   notificationBtn: {
     width: 44,

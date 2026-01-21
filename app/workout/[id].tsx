@@ -31,7 +31,7 @@ interface ExerciseInputState {
 
 export default function WorkoutScreen() {
   const { id } = useLocalSearchParams();
-  const { workoutPlan, logWorkout, getWorkoutById } = useApp();
+  const { workoutPlan, logWorkout, getWorkoutById, addPoints } = useApp();
   const [isComplete, setIsComplete] = useState(false);
   const [routineStarted, setRoutineStarted] = useState(false);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -233,8 +233,10 @@ export default function WorkoutScreen() {
       ...feedbackLog,
       date: new Date().toISOString().split('T')[0],
     });
+    await addPoints(50);
+    console.log('[WorkoutScreen] Added 50 points for completing workout');
     router.replace('/(tabs)/progress');
-  }, [logWorkout]);
+  }, [logWorkout, addPoints]);
 
   if (!workout) {
     return (
