@@ -876,16 +876,6 @@ export default function ProgramBuilderScreen() {
       return groups.sort();
     }, [filteredByCategory, selectedCategory]);
 
-    const exercisesInMuscleGroup = useMemo(() => {
-      if (!selectedMuscleGroup) return [];
-      let result = filteredByCategory.filter(ex => ex.muscleGroup === selectedMuscleGroup);
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        result = result.filter(ex => ex.name.toLowerCase().includes(query));
-      }
-      return result;
-    }, [filteredByCategory, selectedMuscleGroup, searchQuery]);
-
     const searchAllExercises = useMemo(() => {
       if (!searchQuery.trim()) return [];
       const query = searchQuery.toLowerCase();
@@ -976,30 +966,83 @@ export default function ProgramBuilderScreen() {
       </View>
     );
 
-    const renderMuscleGroupSelection = () => (
-      <View style={styles.muscleGroupList}>
-        {uniqueMuscleGroups.map((group) => {
-          const count = filteredByCategory.filter(e => e.muscleGroup === group).length;
-          return (
-            <TouchableOpacity
-              key={group}
-              style={styles.muscleGroupRow}
-              onPress={() => {
-                haptics.selection();
-                setSelectedMuscleGroup(group);
-              }}
-              testID={`muscleGroup-${group}`}
-            >
-              <View style={styles.muscleGroupInfo}>
-                <Text style={styles.muscleGroupName}>{group}</Text>
-                <Text style={styles.muscleGroupCount}>{count} exercise{count !== 1 ? 's' : ''}</Text>
+    const groupedExercises = useMemo(() => {
+      if (!selectedCategory) return {};
+      const grouped: Record<string, ExerciseEntry[]> = {};
+      filteredByCategory.forEach(ex => {
+        if (!grouped[ex.muscleGroup]) {
+          grouped[ex.muscleGroup] = [];
+        }
+        grouped[ex.muscleGroup].push(ex);
+      });
+      return grouped;
+    }, [filteredByCategory, selectedCategory]);
+
+    const filteredGroupedExercises = useMemo(() => {
+      if (!searchQuery.trim()) return groupedExercises;
+      const query = searchQuery.toLowerCase();
+      const filtered: Record<string, ExerciseEntry[]> = {};
+      Object.entries(groupedExercises).forEach(([group, exercises]) => {
+        const matchingExercises = exercises.filter(ex => 
+          ex.name.toLowerCase().includes(query) ||
+          ex.muscleGroup.toLowerCase().includes(query)
+        );
+        if (matchingExercises.length > 0) {
+          filtered[group] = matchingExercises;
+        }
+      });
+      return filtered;
+    }, [groupedExercises, searchQuery]);
+
+    const renderGroupedExerciseList = () => {
+      const groups = Object.entries(filteredGroupedExercises).sort((a, b) => a[0].localeCompare(b[0]));
+      
+      if (groups.length === 0) {
+        return (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <Text style={{ color: colors.textSecondary }}>No exercises found.</Text>
+          </View>
+        );
+      }
+
+      return (
+        <View style={styles.candidatesList}>
+          {groups.map(([group, exercises]) => (
+            <View key={group} style={styles.muscleGroupSection}>
+              <View style={styles.muscleGroupSectionHeader}>
+                <Text style={styles.muscleGroupSectionTitle}>{group}</Text>
+                <Text style={styles.muscleGroupSectionCount}>{exercises.length}</Text>
               </View>
-              <ChevronRight size={20} color={colors.textTertiary} />
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    );
+              {exercises.map((ex) => {
+                const difficultyColor = ex.difficulty === 'Beginner' ? colors.success : ex.difficulty === 'Intermediate' ? colors.warning : colors.danger;
+                return (
+                  <TouchableOpacity 
+                    key={ex.id} 
+                    style={styles.exerciseListRow} 
+                    onPress={() => {
+                      haptics.light();
+                      props.onSelect(convertToExercise(ex));
+                    }} 
+                    testID={`exercisePick-${ex.id}`}
+                  >
+                    <View style={styles.exerciseListMain}>
+                      <Text style={styles.exerciseListName}>{ex.name}</Text>
+                      <Text style={styles.exerciseListMeta}>
+                        {ex.equipment.length > 0 ? ex.equipment.slice(0, 2).join(', ') : 'No equipment'}
+                      </Text>
+                    </View>
+                    <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor + '15' }]}>
+                      <Text style={[styles.difficultyText, { color: difficultyColor }]}>{ex.difficulty}</Text>
+                    </View>
+                    <Plus size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      );
+    };
 
     const renderExerciseList = (exercises: ExerciseEntry[]) => (
       <View style={styles.candidatesList}>
@@ -1019,6 +1062,7 @@ export default function ProgramBuilderScreen() {
                 <Text style={styles.exerciseListName}>{ex.name}</Text>
                 <Text style={styles.exerciseListMeta}>
                   {ex.equipment.length > 0 ? ex.equipment.slice(0, 2).join(', ') : 'No equipment'}
+                  {' · '}{ex.muscleGroup}
                 </Text>
               </View>
               <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor + '15' }]}>
@@ -1033,15 +1077,20 @@ export default function ProgramBuilderScreen() {
 
     const getTitle = () => {
       if (isSwapMode) return 'Swap exercise';
-      if (selectedMuscleGroup) return selectedMuscleGroup;
-      if (selectedCategory) return categoryOptions.find(c => c.key === selectedCategory)?.label || 'Select Muscle Group';
+      if (selectedCategory) {
+        const cat = categoryOptions.find(c => c.key === selectedCategory);
+        return cat?.label || 'Browse Exercises';
+      }
       return 'Choose Category';
     };
 
     const getSubtitle = () => {
       if (isSwapMode) return undefined;
-      if (selectedMuscleGroup) return `${exercisesInMuscleGroup.length} exercises available`;
-      if (selectedCategory) return `${uniqueMuscleGroups.length} muscle groups`;
+      if (selectedCategory) {
+        const totalExercises = filteredByCategory.length;
+        const groupCount = uniqueMuscleGroups.length;
+        return `${totalExercises} exercises · ${groupCount} muscle groups`;
+      }
       return 'Select a category to browse exercises';
     };
 
@@ -1086,17 +1135,6 @@ export default function ProgramBuilderScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-            ) : selectedMuscleGroup ? (
-              <View style={styles.searchContainer}>
-                <Search size={18} color={colors.textTertiary} style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInputStyled}
-                  placeholder={`Search ${selectedMuscleGroup}...`}
-                  placeholderTextColor={colors.textTertiary}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-              </View>
             ) : null}
 
             <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -1123,7 +1161,23 @@ export default function ProgramBuilderScreen() {
                 </>
               )}
 
-              {!isSwapMode && !selectedCategory && searchQuery.trim() && (
+              {!isSwapMode && selectedCategory && (
+              <>
+                <View style={styles.searchContainer}>
+                  <Search size={18} color={colors.textTertiary} style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInputStyled}
+                    placeholder={`Search ${categoryOptions.find(c => c.key === selectedCategory)?.label || ''} exercises...`}
+                    placeholderTextColor={colors.textTertiary}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+                {renderGroupedExerciseList()}
+              </>
+            )}
+
+            {!isSwapMode && !selectedCategory && searchQuery.trim() && (
                 <>
                   <Text style={styles.searchResultsTitle}>Search Results</Text>
                   {searchAllExercises.length > 0 ? (
@@ -1138,17 +1192,7 @@ export default function ProgramBuilderScreen() {
 
               {!isSwapMode && !selectedCategory && !searchQuery.trim() && renderCategorySelection()}
 
-              {!isSwapMode && selectedCategory && !selectedMuscleGroup && renderMuscleGroupSelection()}
 
-              {!isSwapMode && selectedMuscleGroup && (
-                exercisesInMuscleGroup.length > 0 ? (
-                  renderExerciseList(exercisesInMuscleGroup)
-                ) : (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
-                    <Text style={{ color: colors.textSecondary }}>No exercises found.</Text>
-                  </View>
-                )
-              )}
               <View style={{ height: 40 }} />
             </ScrollView>
 
@@ -2240,6 +2284,35 @@ const styles = StyleSheet.create({
   muscleGroupCount: {
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  muscleGroupSection: {
+    marginBottom: 20,
+  },
+  muscleGroupSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  muscleGroupSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: colors.primary,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  muscleGroupSectionCount: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: colors.textTertiary,
+    backgroundColor: colors.background,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   exerciseListRow: {
     flexDirection: 'row',
