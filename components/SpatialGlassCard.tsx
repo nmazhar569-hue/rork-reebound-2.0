@@ -94,6 +94,11 @@ export function SpatialGlassCard({
         baseStyle,
         style,
         {
+          borderTopColor: spatialGlass.edges[theme].top,
+          borderLeftColor: spatialGlass.edges[theme].left,
+          borderBottomColor: spatialGlass.edges[theme].bottom,
+          borderRightColor: spatialGlass.edges[theme].right,
+          borderWidth: 1,
           transform: [{ scale: scaleAnim }],
         },
       ]}
@@ -111,45 +116,9 @@ export function SpatialGlassCard({
           StyleSheet.absoluteFill,
           {
             backgroundColor: interactive ? backgroundColor : baseStyle.backgroundColor,
-            borderRadius: spatialGlass.radius.card,
           },
         ]}
       />
-      
-      {/* Specular Edge (3D Ridge) - Top/Left bright, Bottom/Right dark */}
-      <View style={styles.specularEdge}>
-        {/* Top edge - bright */}
-        <View
-          style={[
-            styles.edgeTop,
-            { backgroundColor: spatialGlass.edges[theme].top },
-          ]}
-        />
-        
-        {/* Left edge - bright */}
-        <View
-          style={[
-            styles.edgeLeft,
-            { backgroundColor: spatialGlass.edges[theme].left },
-          ]}
-        />
-        
-        {/* Bottom edge - dark */}
-        <View
-          style={[
-            styles.edgeBottom,
-            { backgroundColor: spatialGlass.edges[theme].bottom },
-          ]}
-        />
-        
-        {/* Right edge - dark */}
-        <View
-          style={[
-            styles.edgeRight,
-            { backgroundColor: spatialGlass.edges[theme].right },
-          ]}
-        />
-      </View>
       
       {/* Content */}
       <View style={styles.content}>
@@ -181,42 +150,6 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     overflow: 'hidden',
-  },
-  specularEdge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    pointerEvents: 'none',
-  },
-  edgeTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  edgeLeft: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: 1,
-  },
-  edgeBottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  edgeRight: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: 1,
   },
   content: {
     position: 'relative',
