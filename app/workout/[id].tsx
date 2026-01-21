@@ -10,6 +10,7 @@ import { ProgressBar } from '@/components/ui';
 import { ExerciseInputCard } from '@/components/ExerciseInputCard';
 import { RestTimerOverlay } from '@/components/RestTimerOverlay';
 import { PostWorkoutFeedback } from '@/components/PostWorkoutFeedback';
+import { storageService } from '@/services/StorageService';
 import { DailyLog, WorkoutSession, ExerciseLog, SetLog } from '@/types';
 import colors from '@/constants/colors';
 import { haptics } from '@/utils/haptics';
@@ -152,12 +153,18 @@ export default function WorkoutScreen() {
     return session;
   }, [workout, exerciseInputs, timerValue]);
 
-  const handleFinishWorkout = useCallback(() => {
+  const handleFinishWorkout = useCallback(async () => {
     haptics.medium();
     setTimerRunning(false);
     const session = compileWorkoutSession();
     if (session) {
       console.log('Workout completed! Total volume:', session.totalVolume, 'lbs');
+      try {
+        await storageService.saveWorkout(session);
+        console.log('[WorkoutScreen] Session saved to persistent storage');
+      } catch (error) {
+        console.error('[WorkoutScreen] Failed to save session:', error);
+      }
     }
     setIsComplete(true);
   }, [compileWorkoutSession]);

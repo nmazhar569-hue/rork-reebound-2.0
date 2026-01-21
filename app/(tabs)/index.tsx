@@ -23,6 +23,8 @@ import { StatusGlassCard } from '@/components/StatusGlassCard';
 import { RecoveryInbox } from '@/components/RecoveryInbox';
 import { analysisService, RecoveryAnalysis, StatusColor } from '@/services/AnalysisService';
 import { calendarService, DailyAvailability } from '@/services/CalendarService';
+import { storageService } from '@/services/StorageService';
+import { WorkoutSession } from '@/types';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -69,6 +71,8 @@ export default function HomeScreen() {
   const [inboxVisible, setInboxVisible] = useState(false);
   const [recoveryStatus, setRecoveryStatus] = useState<RecoveryAnalysis | null>(null);
   const [calendarAvailability, setCalendarAvailability] = useState<DailyAvailability | null>(null);
+  const [lastWorkout, setLastWorkout] = useState<WorkoutSession | null>(null);
+  const [weeklyVolumeAvg, setWeeklyVolumeAvg] = useState<number>(0);
 
   const mockBiometrics = useMemo(() => {
     const painLevel = todayReadiness?.painLevel ?? 3;
@@ -99,6 +103,21 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    const loadWorkoutHistory = async () => {
+      try {
+        const last = await storageService.getLastWorkout();
+        const avgVolume = await storageService.getWeeklyVolumeAverage();
+        setLastWorkout(last);
+        setWeeklyVolumeAvg(avgVolume);
+        console.log('[HomeScreen] Last workout:', last?.date, 'Volume avg:', avgVolume);
+      } catch (error) {
+        console.error('[HomeScreen] Error loading workout history:', error);
+      }
+    };
+    loadWorkoutHistory();
+  }, []);
+
+  useEffect(() => {
     const freeMinutes = calendarAvailability?.totalFreeMinutes;
     const result = analysisService.analyzeDailyState(
       {
@@ -110,13 +129,13 @@ export default function HomeScreen() {
         sorenessRating: mockBiometrics.sorenessRating,
         stressRating: mockBiometrics.stressRating,
       },
-      undefined,
-      0,
+      lastWorkout ?? undefined,
+      weeklyVolumeAvg,
       freeMinutes
     );
     setRecoveryStatus(result);
     console.log('[HomeScreen] Recovery analysis:', result);
-  }, [mockBiometrics, calendarAvailability]);
+  }, [mockBiometrics, calendarAvailability, lastWorkout, weeklyVolumeAvg]);
 
   useFocusEffect(
     useCallback(() => {

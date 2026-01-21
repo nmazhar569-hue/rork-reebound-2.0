@@ -93,6 +93,39 @@ export class AnalysisService {
           message: `Acute volume spike detected (+25% over average). Risk of DOMS/Injury.`
         });
       }
+
+      // Check workout recency - acute fatigue from recent sessions
+      const today = new Date().toISOString().split('T')[0];
+      const workoutDate = lastWorkout.date;
+      const daysSinceWorkout = this.getDaysBetween(workoutDate, today);
+
+      if (daysSinceWorkout === 0) {
+        // Worked out today - acute fatigue
+        recoveryScore -= 15;
+        flags.push({
+          id: 'worked_today',
+          type: 'INTENSITY',
+          severity: 'MEDIUM',
+          message: `You already trained today (${lastWorkout.durationMinutes}min, ${lastWorkout.totalVolume.toLocaleString()}lbs volume). Additional training not recommended.`
+        });
+      } else if (daysSinceWorkout === 1 && lastWorkout.totalVolume > 10000) {
+        // High volume yesterday - delayed soreness expected
+        recoveryScore -= 10;
+        flags.push({
+          id: 'high_vol_yesterday',
+          type: 'INTENSITY',
+          severity: 'LOW',
+          message: `Yesterday's session was high volume (${lastWorkout.totalVolume.toLocaleString()}lbs). DOMS may be setting in. Consider lighter work.`
+        });
+      } else if (daysSinceWorkout >= 4) {
+        // Haven't trained in a while - good to go but ease in
+        flags.push({
+          id: 'training_gap',
+          type: 'INTENSITY',
+          severity: 'LOW',
+          message: `${daysSinceWorkout} days since last session. Ease back in with moderate intensity.`
+        });
+      }
     }
 
     // RULE 4: Subjective Stress
@@ -222,6 +255,13 @@ export class AnalysisService {
       RED: '#EF4444'
     };
     return colors[color];
+  }
+
+  private getDaysBetween(dateStr1: string, dateStr2: string): number {
+    const date1 = new Date(dateStr1);
+    const date2 = new Date(dateStr2);
+    const diffTime = Math.abs(date2.getTime() - date1.getTime());
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 }
 
