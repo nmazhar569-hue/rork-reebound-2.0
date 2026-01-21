@@ -1,19 +1,22 @@
 import { useLocalSearchParams, router, Stack } from 'expo-router';
-import { X, ChevronRight, Clock, Pencil, Play, Pause, RotateCcw, Flag } from 'lucide-react-native';
+import { X, ChevronRight, Clock, Pencil, Play, Pause, RotateCcw, Flag, Zap } from 'lucide-react-native';
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useApp } from '@/contexts/AppContext';
-import { ProgressBar } from '@/components/ui';
+
 import { ExerciseInputCard } from '@/components/ExerciseInputCard';
 import { RestTimerOverlay } from '@/components/RestTimerOverlay';
 import { PostWorkoutFeedback } from '@/components/PostWorkoutFeedback';
 import { storageService } from '@/services/StorageService';
 import { DailyLog, WorkoutSession, ExerciseLog, SetLog } from '@/types';
-import colors from '@/constants/colors';
+import colors, { gradients } from '@/constants/colors';
 import { haptics } from '@/utils/haptics';
+
+const TEAL = '#00C2B8';
+const ORANGE = '#FF7A50';
 
 interface SetInputData {
   weight: string;
@@ -42,6 +45,8 @@ export default function WorkoutScreen() {
   });
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const startButtonScale = useRef(new Animated.Value(1)).current;
+  const finishButtonGlow = useRef(new Animated.Value(0)).current;
 
   const workout = useMemo(() => {
     const idStr = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : undefined;
@@ -50,11 +55,26 @@ export default function WorkoutScreen() {
   }, [workoutPlan, id, getWorkoutById]);
 
   const startRoutine = useCallback(() => {
-    haptics.medium();
+    haptics.completionWave();
+    
+    Animated.sequence([
+      Animated.timing(startButtonScale, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(startButtonScale, {
+        toValue: 1,
+        tension: 200,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     setRoutineStarted(true);
     setTimerRunning(true);
     setTimerValue(0);
-  }, []);
+  }, [startButtonScale]);
 
   const toggleTimer = useCallback(() => {
     haptics.soft();
@@ -80,6 +100,25 @@ export default function WorkoutScreen() {
       }
     };
   }, [timerRunning]);
+
+  useEffect(() => {
+    if (routineStarted) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(finishButtonGlow, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: false,
+          }),
+          Animated.timing(finishButtonGlow, {
+            toValue: 0,
+            duration: 2000,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+    }
+  }, [routineStarted, finishButtonGlow]);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -154,7 +193,7 @@ export default function WorkoutScreen() {
   }, [workout, exerciseInputs, timerValue]);
 
   const handleFinishWorkout = useCallback(async () => {
-    haptics.medium();
+    haptics.recoveryFinish();
     setTimerRunning(false);
     const session = compileWorkoutSession();
     if (session) {
@@ -228,12 +267,17 @@ export default function WorkoutScreen() {
 
   const progress = totalSets > 0 ? (totalCompletedSets / totalSets) * 100 : 0;
 
+  const finishButtonShadowOpacity = finishButtonGlow.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.2, 0.5],
+  });
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <LinearGradient
-        colors={['#0A0A0F', '#12121A', '#0A0A0F']}
+        colors={['#F5F7FA', '#EEF1F5', '#F8F9FB']}
         style={StyleSheet.absoluteFill}
       />
 
@@ -246,7 +290,7 @@ export default function WorkoutScreen() {
               { text: 'Exit', style: 'destructive', onPress: () => router.back() },
             ])}
           >
-            <X size={22} color="rgba(255,255,255,0.7)" />
+            <X size={22} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -264,43 +308,45 @@ export default function WorkoutScreen() {
               }}
               style={styles.headerButton}
             >
-              <Pencil size={20} color={colors.primary} />
+              <Pencil size={20} color={TEAL} />
             </TouchableOpacity>
           ) : <View style={styles.headerButton} />}
         </View>
 
         <View style={styles.statsBar}>
-          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
           <View style={styles.statsContent}>
             {!routineStarted ? (
-              <TouchableOpacity style={styles.startButton} onPress={startRoutine} activeOpacity={0.8}>
-                <LinearGradient
-                  colors={['#00D9A3', '#00B885']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.startButtonGradient}
-                >
-                  <Play size={18} color="#000" fill="#000" />
-                  <Text style={styles.startButtonText}>Start Session</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+              <Animated.View style={[styles.startButtonWrapper, { transform: [{ scale: startButtonScale }] }]}>
+                <TouchableOpacity style={styles.startButton} onPress={startRoutine} activeOpacity={0.9}>
+                  <LinearGradient
+                    colors={gradients.startButton}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.startButtonGradient}
+                  >
+                    <Zap size={20} color="#FFF" fill="#FFF" />
+                    <Text style={styles.startButtonText}>Start Workout</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
             ) : (
               <>
                 <View style={styles.timerSection}>
                   <View style={styles.timerDisplay}>
-                    <Clock size={16} color={colors.primary} />
+                    <Clock size={16} color={TEAL} />
                     <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
                   </View>
                   <View style={styles.timerControls}>
                     <TouchableOpacity style={styles.timerBtn} onPress={toggleTimer}>
                       {timerRunning ? (
-                        <Pause size={16} color="#FFF" />
+                        <Pause size={16} color={TEAL} />
                       ) : (
-                        <Play size={16} color={colors.primary} fill={colors.primary} />
+                        <Play size={16} color={TEAL} fill={TEAL} />
                       )}
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.timerBtn} onPress={resetTimer}>
-                      <RotateCcw size={16} color="rgba(255,255,255,0.5)" />
+                      <RotateCcw size={16} color={colors.textTertiary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -310,7 +356,14 @@ export default function WorkoutScreen() {
                     {totalCompletedSets}/{totalSets} sets
                   </Text>
                   <View style={styles.progressBarWrapper}>
-                    <ProgressBar progress={progress} height={4} />
+                    <View style={styles.progressBarTrack}>
+                      <LinearGradient
+                        colors={progress === 100 ? gradients.completionWave : gradients.active}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[styles.progressBarFill, { width: `${progress}%` }]}
+                      />
+                    </View>
                   </View>
                 </View>
               </>
@@ -334,7 +387,7 @@ export default function WorkoutScreen() {
                 handleSetComplete(exercise.id, exercise.name, exercise.rest, setIndex, data)
               }
               onAllSetsChange={(sets) => handleExerciseSetsChange(exercise.id, sets)}
-              darkMode={true}
+              darkMode={false}
             />
           ))}
 
@@ -343,23 +396,32 @@ export default function WorkoutScreen() {
 
         {routineStarted && (
           <View style={styles.finishContainer}>
-            <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-            <TouchableOpacity
-              style={styles.finishButton}
-              onPress={handleFinishWorkout}
-              activeOpacity={0.9}
+            <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
+            <Animated.View 
+              style={[
+                styles.finishButtonShadow,
+                { 
+                  shadowOpacity: finishButtonShadowOpacity,
+                }
+              ]}
             >
-              <LinearGradient
-                colors={['#00D9A3', '#00B885']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.finishButtonGradient}
+              <TouchableOpacity
+                style={styles.finishButton}
+                onPress={handleFinishWorkout}
+                activeOpacity={0.9}
               >
-                <Flag size={20} color="#000" />
-                <Text style={styles.finishButtonText}>Finish Workout</Text>
-                <ChevronRight size={20} color="#000" />
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={gradients.finishButton}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.finishButtonGradient}
+                >
+                  <Flag size={20} color="#FFF" />
+                  <Text style={styles.finishButtonText}>Finish Workout</Text>
+                  <ChevronRight size={20} color="#FFF" />
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
         )}
       </SafeAreaView>
@@ -380,7 +442,7 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: '#F5F7FA',
   },
   safeArea: {
     flex: 1,
@@ -393,12 +455,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   headerCenter: {
     flex: 1,
@@ -406,46 +470,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700' as const,
-    color: '#FFFFFF',
+    color: colors.text,
     textAlign: 'center',
   },
   headerSubtitle: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    fontSize: 13,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   statsBar: {
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 20,
+    borderRadius: 22,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 194, 184, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
   statsContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
+    padding: 16,
     gap: 16,
   },
-  startButton: {
+  startButtonWrapper: {
     flex: 1,
+  },
+  startButton: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: TEAL,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 6,
   },
   startButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    paddingVertical: 14,
-    borderRadius: 16,
+    paddingVertical: 16,
+    borderRadius: 18,
   },
   startButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700' as const,
-    color: '#000',
+    color: '#FFF',
   },
   timerSection: {
     flexDirection: 'row',
@@ -458,9 +532,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   timerText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700' as const,
-    color: '#FFFFFF',
+    color: colors.text,
     fontVariant: ['tabular-nums'],
   },
   timerControls: {
@@ -468,12 +542,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   timerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0, 194, 184, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 194, 184, 0.2)',
   },
   progressSection: {
     flex: 1,
@@ -481,12 +557,22 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   progressLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600' as const,
-    color: 'rgba(255,255,255,0.6)',
+    color: colors.textSecondary,
   },
   progressBarWrapper: {
-    width: 100,
+    width: 110,
+  },
+  progressBarTrack: {
+    height: 6,
+    backgroundColor: 'rgba(0, 194, 184, 0.15)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   scrollView: {
     flex: 1,
@@ -496,7 +582,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   bottomSpacer: {
-    height: 100,
+    height: 110,
   },
   finishContainer: {
     position: 'absolute',
@@ -507,11 +593,18 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingBottom: 34,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
     overflow: 'hidden',
   },
+  finishButtonShadow: {
+    borderRadius: 22,
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+    elevation: 8,
+  },
   finishButton: {
-    borderRadius: 20,
+    borderRadius: 22,
     overflow: 'hidden',
   },
   finishButtonGradient: {
@@ -524,28 +617,31 @@ const styles = StyleSheet.create({
   finishButtonText: {
     fontSize: 17,
     fontWeight: '700' as const,
-    color: '#000',
+    color: '#FFF',
   },
   errorContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+    backgroundColor: '#F5F7FA',
   },
   errorText: {
     fontSize: 18,
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 20,
   },
   backButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0, 194, 184, 0.1)',
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 194, 184, 0.2)',
   },
   backButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: '#FFFFFF',
+    color: TEAL,
   },
 });
