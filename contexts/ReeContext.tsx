@@ -90,6 +90,7 @@ export const [ReeProvider, useRee] = createContextHook(() => {
   const [taughtConcepts, setTaughtConcepts] = useState<string[]>([]);
   const [referencedTopics, setReferencedTopics] = useState<string[]>([]);
   const [lastInteractionAt, setLastInteractionAt] = useState<string | null>(null);
+  const [hasUnseenInsight, setHasUnseenInsight] = useState(false);
 
   /**
    * -------------------------------------
@@ -161,6 +162,7 @@ export const [ReeProvider, useRee] = createContextHook(() => {
       if (insight && !dismissedTriggers.includes(insight.trigger)) {
         setCurrentInsight(insight);
         setIsMinimized(false);
+        setHasUnseenInsight(true);
       } else {
         setCurrentInsight(null);
       }
@@ -261,10 +263,51 @@ export const [ReeProvider, useRee] = createContextHook(() => {
 
   const expandRee = useCallback(async () => {
     setIsMinimized(false);
+    setHasUnseenInsight(false);
     const now = new Date().toISOString();
     setLastInteractionAt(now);
     await AsyncStorage.setItem(STORAGE_KEYS.LAST_INTERACTION, now);
   }, []);
+
+  const recordInteraction = useCallback(async () => {
+    setHasUnseenInsight(false);
+    const now = new Date().toISOString();
+    setLastInteractionAt(now);
+    await AsyncStorage.setItem(STORAGE_KEYS.LAST_INTERACTION, now);
+  }, []);
+
+  const refreshHomeInsight = useCallback(() => {
+    const returnStatus = getReturnStatus();
+    const readiness = getTodayReadiness();
+
+    const insight = generateHomeInsight({
+      isReturning: returnStatus.isReturning,
+      daysAway: returnStatus.daysAway,
+      hasProgram: !!getActiveProgram(),
+      hasTodayWorkout: !!getTodayWorkout(),
+      painLevel: readiness?.painLevel ?? 0,
+      confidence: readiness?.confidence ?? null,
+      recoveryFirstMode: userProfile?.recoveryFirstMode ?? false,
+      intentProfile: userProfile?.intentProfile,
+      isFirstVisit: false,
+      taughtConcepts,
+      referencedTopics,
+    });
+
+    if (insight && !dismissedTriggers.includes(insight.trigger)) {
+      setCurrentInsight(insight);
+      setHasUnseenInsight(true);
+    }
+  }, [
+    getReturnStatus,
+    getTodayReadiness,
+    getActiveProgram,
+    getTodayWorkout,
+    userProfile,
+    taughtConcepts,
+    referencedTopics,
+    dismissedTriggers,
+  ]);
 
   const updateSettings = useCallback(
     async (newSettings: Partial<ReePresenceSettings>) => {
@@ -320,6 +363,7 @@ export const [ReeProvider, useRee] = createContextHook(() => {
     taughtConcepts,
     referencedTopics,
     shouldShowPresence,
+    hasUnseenInsight,
 
     updateScreenContext,
     dismissCurrentInsight,
@@ -334,5 +378,7 @@ export const [ReeProvider, useRee] = createContextHook(() => {
     markScreenVisited,
     markConceptTaught,
     addReferencedTopic,
+    recordInteraction,
+    refreshHomeInsight,
   };
 });

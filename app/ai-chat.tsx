@@ -367,12 +367,12 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     padding: 12,
-    backgroundColor: colors.errorLight,
+    backgroundColor: colors.dangerMuted,
     borderRadius: 8,
   },
   errorText: {
     fontSize: 14,
-    color: colors.error,
+    color: colors.danger,
     textAlign: 'center',
   },
   inputContainer: {
