@@ -20,6 +20,7 @@ import { haptics } from '@/utils/haptics';
 import { recoveryRoutines } from '@/constants/workoutTemplates';
 import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import { StatusGlassCard } from '@/components/StatusGlassCard';
+import { RecoveryInbox } from '@/components/RecoveryInbox';
 import { analysisService, RecoveryAnalysis, StatusColor } from '@/services/AnalysisService';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -64,6 +65,7 @@ export default function HomeScreen() {
   const [readinessStep, setReadinessStep] = useState<'pain' | 'confidence'>('pain');
   const [showWelcomeBack, setShowWelcomeBack] = useState(returnStatus.isReturning);
   const [hasNotifications] = useState(true);
+  const [inboxVisible, setInboxVisible] = useState(false);
   const [recoveryStatus, setRecoveryStatus] = useState<RecoveryAnalysis | null>(null);
 
   const mockBiometrics = useMemo(() => {
@@ -205,7 +207,14 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.logoTitle}>Reebound</Text>
           </View>
-          <TouchableOpacity style={styles.notificationBtn} onPress={() => haptics.light()}>
+          <TouchableOpacity 
+            style={styles.notificationBtn} 
+            onPress={() => {
+              haptics.light();
+              setInboxVisible(true);
+            }}
+            testID="inbox-button"
+          >
             <Bell size={20} color={liquidGlass.text.primary} />
             {hasNotifications && <View style={styles.notificationDot} />}
           </TouchableOpacity>
@@ -411,6 +420,11 @@ export default function HomeScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      <RecoveryInbox 
+        visible={inboxVisible} 
+        onClose={() => setInboxVisible(false)} 
+      />
     </View>
   );
 }
