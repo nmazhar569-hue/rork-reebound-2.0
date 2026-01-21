@@ -1,65 +1,3 @@
-useEffect(() => {
-  if (scrollViewRef.current) {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }
-}, [messages, status]);
-ADAPT TO USER:
-- Explanation depth preference: ${userProfile?.aiPreferences?.explanationDepth || 'simple'}
-=== EXPLANATION MODE ===
-
-Current Mode: ${mode.toUpperCase()}
-
-BASIC MODE RULES:
-- Use plain language
-- Avoid scientific terms unless unavoidable
-- No study names or statistics
-- Focus on what it means for the user
-
-DEEP THINKING MODE RULES:
-- Explain underlying mechanisms (biomechanics, physiology, neuroscience)
-- Reference *type* of evidence (e.g. “studies suggest”, “meta-analyses show”)
-- No fake citations, no paper titles
-- Explain uncertainty and trade-offs
-- Still respect the INFORMATION BUDGET unless user asks for more
-
-Never change tone, empathy, or autonomy rules based on mode.
-  <View style={styles.modeToggleContainer}>
-  <TouchableOpacity
-    onPress={() => setMode('basic')}
-    style={[
-      styles.modeChip,
-      mode === 'basic' && styles.modeChipActive,
-    ]}
-  >
-    <Text
-      style={[
-        styles.modeChipText,
-        mode === 'basic' && styles.modeChipTextActive,
-      ]}
-    >
-      Basic
-    </Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity
-    onPress={() => setMode('deep')}
-    style={[
-      styles.modeChip,
-      mode === 'deep' && styles.modeChipActive,
-    ]}
-  >
-    <Text
-      style={[
-        styles.modeChipText,
-        mode === 'deep' && styles.modeChipTextActive,
-      ]}
-    >
-      Deep Thinking
-    </Text>
-  </TouchableOpacity>
-</View>
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -75,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { X, Send, Bot, Sparkles } from 'lucide-react-native';
+import { X, Send, Sparkles } from 'lucide-react-native';
 
 import colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -94,12 +32,8 @@ export default function AIChatScreen() {
 
   const [inputText, setInputText] = useState('');
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [mode, setMode] = useState<'basic' | 'deep'>('basic');
 
-  /**
-   * -------------------------------------
-   * User Context (Defensive + Readable)
-   * -------------------------------------
-   */
   const userContext = userProfile
     ? `
 User Profile:
@@ -115,11 +49,6 @@ Current Status:
 `
     : 'User profile not available yet.';
 
-  /**
-   * -------------------------------------
-   * System Prompt
-   * -------------------------------------
-   */
   const systemPrompt = `${REE_SYSTEM_PROMPT}
 
 === RESPONSE RULES ===
@@ -129,27 +58,33 @@ Current Status:
 - Calm, neutral, human tone
 - Never command or optimize
 
-Explanation depth preference: ${
-    userProfile?.aiPreferences?.explanationDepth || 'simple'
-  }
+=== EXPLANATION MODE ===
+Current Mode: ${mode.toUpperCase()}
+
+BASIC MODE RULES:
+- Use plain language
+- Avoid scientific terms unless unavoidable
+- No study names or statistics
+- Focus on what it means for the user
+
+DEEP THINKING MODE RULES:
+- Explain underlying mechanisms (biomechanics, physiology, neuroscience)
+- Reference *type* of evidence (e.g. "studies suggest", "meta-analyses show")
+- No fake citations, no paper titles
+- Explain uncertainty and trade-offs
+- Still respect the INFORMATION BUDGET unless user asks for more
+
+Never change tone, empathy, or autonomy rules based on mode.
+
+Explanation depth preference: ${userProfile?.aiPreferences?.explanationDepth || 'simple'}
 
 USER CONTEXT:
 ${userContext}
 `;
 
-  /**
-   * -------------------------------------
-   * Rork Agent
-   * -------------------------------------
-   */
   const { messages, sendMessage, status, error, setMessages } =
     useRorkAgent({ tools: {} });
 
-  /**
-   * -------------------------------------
-   * Initialize System Message Once
-   * -------------------------------------
-   */
   useEffect(() => {
     if (!hasInitialized) {
       setMessages([
@@ -163,11 +98,6 @@ ${userContext}
     }
   }, [hasInitialized, setMessages, systemPrompt]);
 
-  /**
-   * -------------------------------------
-   * Handle Initial Query
-   * -------------------------------------
-   */
   useEffect(() => {
     if (
       params.initialQuery &&
@@ -182,22 +112,14 @@ ${userContext}
     }
   }, [params.initialQuery, hasInitialized, messages.length, status, sendMessage]);
 
-  /**
-   * -------------------------------------
-   * Auto Scroll (Smooth)
-   * -------------------------------------
-   */
   useEffect(() => {
-    requestAnimationFrame(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    });
+    if (scrollViewRef.current) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
   }, [messages, status]);
 
-  /**
-   * -------------------------------------
-   * Send Handler
-   * -------------------------------------
-   */
   const handleSend = useCallback(() => {
     if (!inputText.trim() || status === 'streaming') return;
     sendMessage(inputText.trim());
@@ -205,14 +127,8 @@ ${userContext}
     Keyboard.dismiss();
   }, [inputText, status, sendMessage]);
 
-  /**
-   * -------------------------------------
-   * Render
-   * -------------------------------------
-   */
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
           <View style={styles.iconContainer}>
@@ -232,7 +148,42 @@ ${userContext}
         </TouchableOpacity>
       </View>
 
-      {/* Chat */}
+      <View style={styles.modeToggleContainer}>
+        <TouchableOpacity
+          onPress={() => setMode('basic')}
+          style={[
+            styles.modeChip,
+            mode === 'basic' && styles.modeChipActive,
+          ]}
+        >
+          <Text
+            style={[
+              styles.modeChipText,
+              mode === 'basic' && styles.modeChipTextActive,
+            ]}
+          >
+            Basic
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setMode('deep')}
+          style={[
+            styles.modeChip,
+            mode === 'deep' && styles.modeChipActive,
+          ]}
+        >
+          <Text
+            style={[
+              styles.modeChipText,
+              mode === 'deep' && styles.modeChipTextActive,
+            ]}
+          >
+            Deep Thinking
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         ref={scrollViewRef}
         style={styles.chatContainer}
@@ -271,7 +222,7 @@ ${userContext}
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>
-              Something didn’t load correctly. Try again when ready.
+              Something didn't load correctly. Try again when ready.
             </Text>
           </View>
         )}
@@ -279,7 +230,6 @@ ${userContext}
         <View style={{ height: 24 }} />
       </ScrollView>
 
-      {/* Input */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
@@ -313,10 +263,148 @@ ${userContext}
       </KeyboardAvoidingView>
     </View>
   );
-}useEffect(() => {
-  if (scrollViewRef.current) {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }
-}, [messages, status]);
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  modeToggleContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modeChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  modeChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  modeChipTextActive: {
+    color: colors.surface,
+  },
+  chatContainer: {
+    flex: 1,
+  },
+  chatContent: {
+    padding: 16,
+    gap: 12,
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 16,
+  },
+  userBubble: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.primary,
+    borderBottomRightRadius: 4,
+  },
+  aiBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surface,
+    borderBottomLeftRadius: 4,
+  },
+  messageText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  userMessageText: {
+    color: colors.surface,
+  },
+  aiMessageText: {
+    color: colors.text,
+  },
+  errorContainer: {
+    padding: 12,
+    backgroundColor: colors.errorLight,
+    borderRadius: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: colors.error,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  input: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 120,
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: colors.text,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: colors.textTertiary,
+  },
+});
