@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Sparkles, Check, ChevronRight, ChevronLeft, ShieldAlert, User, Target, Dumbbell, Utensils, Clock, Heart } from 'lucide-react-native';
+import { Sparkles, Check, ChevronRight, ChevronLeft, ShieldAlert, User, Target, Dumbbell, Utensils, Clock, Heart, Moon, Activity } from 'lucide-react-native';
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
@@ -35,7 +35,7 @@ import {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const TOTAL_QUESTIONS = 15;
+const TOTAL_QUESTIONS = 17;
 
 interface QuestionConfig {
   id: string;
@@ -247,6 +247,37 @@ const QUESTIONS: QuestionConfig[] = [
     ],
   },
   {
+    id: 'baselineSleep',
+    section: 'Recovery Baselines',
+    sectionIcon: <Moon size={18} color={colors.primary} />,
+    question: 'How much sleep do you usually get?',
+    subtitle: 'This helps us detect when you\'re under-recovered.',
+    type: 'single',
+    options: [
+      { value: '5', label: '5 hours or less', description: 'Chronically short' },
+      { value: '6', label: 'About 6 hours', description: 'Below average' },
+      { value: '7', label: 'About 7 hours', description: 'Average' },
+      { value: '7.5', label: '7-8 hours', description: 'Optimal range' },
+      { value: '8', label: '8+ hours', description: 'Well rested' },
+    ],
+  },
+  {
+    id: 'baselineHrv',
+    section: 'Recovery Baselines',
+    sectionIcon: <Activity size={18} color={colors.primary} />,
+    question: 'Do you know your typical HRV?',
+    subtitle: 'If you use a smartwatch, this helps us gauge CNS fatigue. Skip if unsure.',
+    type: 'single',
+    skippable: true,
+    skipText: 'I don\'t track HRV',
+    options: [
+      { value: '30', label: 'Below 30 ms', description: 'Lower range' },
+      { value: '40', label: '30-50 ms', description: 'Average' },
+      { value: '50', label: '50-70 ms', description: 'Good' },
+      { value: '70', label: '70+ ms', description: 'Excellent' },
+    ],
+  },
+  {
     id: 'confirmation',
     section: 'Confirmation',
     sectionIcon: <Check size={18} color={colors.primary} />,
@@ -440,6 +471,9 @@ export default function OnboardingScreen() {
 
     const hasInjury = !!answers.limitationsNotes && (answers.limitationsNotes as string).toLowerCase().includes('knee');
     
+    const baselineSleep = answers.baselineSleep ? parseFloat(answers.baselineSleep as string) : 7.5;
+    const baselineHrv = answers.baselineHrv ? parseInt(answers.baselineHrv as string, 10) : 50;
+
     const profile: UserProfile = {
       injuryType: hasInjury ? 'general_pain' : 'general_pain',
       painTolerance: 'medium',
@@ -447,6 +481,9 @@ export default function OnboardingScreen() {
       sportType: 'gym',
       weeklyFrequency: getWeeklyFrequency(answers.trainingFrequencyCurrent as TrainingFrequencyCurrent),
       onboardingCompleted: true,
+      baselineSleep,
+      baselineHrv,
+      goal: 'GENERAL',
       questionnaireProfile,
       aiPreferences: {
         explanationDepth: answers.reePersonalityPreference === 'data_focused' ? 'applied_science' : 'simple',
@@ -477,6 +514,9 @@ export default function OnboardingScreen() {
       sportType: 'gym',
       weeklyFrequency: 3,
       onboardingCompleted: true,
+      baselineSleep: 7.5,
+      baselineHrv: 50,
+      goal: 'GENERAL',
       questionnaireProfile: {
         completedAt: new Date().toISOString(),
         primaryGoals: [],

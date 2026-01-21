@@ -1,4 +1,4 @@
-import { WorkoutSession, SleepData } from '@/types';
+import { WorkoutSession, SleepData, UserProfile } from '@/types';
 
 export interface DailyBiometrics {
   date: Date;
@@ -27,20 +27,27 @@ export interface RecoveryAnalysis {
 }
 
 export class AnalysisService {
-  private readonly BASELINE_SLEEP = 7.5;
-  private readonly BASELINE_HRV = 50;
+  private readonly DEFAULT_BASELINE_SLEEP = 7.5;
+  private readonly DEFAULT_BASELINE_HRV = 50;
 
   public analyzeDailyState(
     todaysBiometrics: DailyBiometrics,
     lastWorkout?: WorkoutSession,
     weeklyVolumeAverage: number = 0,
-    freeMinutes?: number
+    freeMinutes?: number,
+    userProfile?: UserProfile | null
   ): RecoveryAnalysis {
     const flags: RecoveryFlag[] = [];
     let recoveryScore = 100;
 
+    // Use user's personalized baselines or defaults
+    const baselineSleep = userProfile?.baselineSleep ?? this.DEFAULT_BASELINE_SLEEP;
+    const baselineHrv = userProfile?.baselineHrv ?? this.DEFAULT_BASELINE_HRV;
+
+    console.log('[AnalysisService] Using baselines - Sleep:', baselineSleep, 'h, HRV:', baselineHrv, 'ms');
+
     // RULE 1: Sleep Logic
-    const sleepDelta = todaysBiometrics.sleepHours - this.BASELINE_SLEEP;
+    const sleepDelta = todaysBiometrics.sleepHours - baselineSleep;
 
     if (todaysBiometrics.sleepHours < 5) {
       recoveryScore -= 30;
@@ -61,8 +68,8 @@ export class AnalysisService {
     }
 
     // RULE 2: HRV / CNS Status
-    const hrvDrop = this.BASELINE_HRV - todaysBiometrics.hrv;
-    const hrvDropPercent = (hrvDrop / this.BASELINE_HRV) * 100;
+    const hrvDrop = baselineHrv - todaysBiometrics.hrv;
+    const hrvDropPercent = (hrvDrop / baselineHrv) * 100;
 
     if (hrvDropPercent > 20) {
       recoveryScore -= 25;

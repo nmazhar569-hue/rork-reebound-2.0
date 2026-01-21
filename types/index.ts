@@ -57,6 +57,11 @@ export interface UserProfile {
   weeklyFrequency: number;
   onboardingCompleted: boolean;
   
+  // Recovery Baselines (for Analysis Agent)
+  baselineSleep?: number; // hours, e.g., 7.5
+  baselineHrv?: number;   // ms, e.g., 50
+  goal?: 'HYPERTROPHY' | 'STRENGTH' | 'ENDURANCE' | 'GENERAL';
+  
   // Body & Lifestyle
   gender?: GenderIdentity;
   height?: number; // cm

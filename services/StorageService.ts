@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { WorkoutSession } from '@/types';
+import { WorkoutSession, UserProfile } from '@/types';
 
 const STORAGE_KEY = '@ai_rebound_history';
+const PROFILE_KEY = '@ai_rebound_profile';
 
 class StorageService {
   async saveWorkout(session: WorkoutSession): Promise<void> {
@@ -111,6 +112,32 @@ class StorageService {
     } catch (error) {
       console.error('[StorageService] Error clearing history:', error);
       throw error;
+    }
+  }
+
+  async saveUserProfile(profile: UserProfile): Promise<void> {
+    try {
+      await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+      console.log('[StorageService] User profile saved');
+    } catch (error) {
+      console.error('[StorageService] Error saving user profile:', error);
+      throw error;
+    }
+  }
+
+  async getUserProfile(): Promise<UserProfile | null> {
+    try {
+      const data = await AsyncStorage.getItem(PROFILE_KEY);
+      if (!data) {
+        console.log('[StorageService] No user profile found');
+        return null;
+      }
+      const profile = JSON.parse(data) as UserProfile;
+      console.log('[StorageService] Loaded user profile:', profile.questionnaireProfile?.preferredName || 'User');
+      return profile;
+    } catch (error) {
+      console.error('[StorageService] Error loading user profile:', error);
+      return null;
     }
   }
 }
