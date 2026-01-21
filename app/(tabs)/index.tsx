@@ -22,6 +22,7 @@ import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass'
 import { StatusGlassCard } from '@/components/StatusGlassCard';
 import { RecoveryInbox } from '@/components/RecoveryInbox';
 import { analysisService, RecoveryAnalysis, StatusColor } from '@/services/AnalysisService';
+import { calendarService, DailyAvailability } from '@/services/CalendarService';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -67,6 +68,7 @@ export default function HomeScreen() {
   const [hasNotifications] = useState(true);
   const [inboxVisible, setInboxVisible] = useState(false);
   const [recoveryStatus, setRecoveryStatus] = useState<RecoveryAnalysis | null>(null);
+  const [calendarAvailability, setCalendarAvailability] = useState<DailyAvailability | null>(null);
 
   const mockBiometrics = useMemo(() => {
     const painLevel = todayReadiness?.painLevel ?? 3;
@@ -83,18 +85,38 @@ export default function HomeScreen() {
   }, [todayReadiness]);
 
   useEffect(() => {
-    const result = analysisService.analyzeDailyState({
-      date: new Date(),
-      sleepHours: mockBiometrics.sleepHours,
-      sleepQuality: 'fair',
-      hrv: mockBiometrics.hrv,
-      restingHeartRate: 62,
-      sorenessRating: mockBiometrics.sorenessRating,
-      stressRating: mockBiometrics.stressRating,
-    });
+    const initCalendar = async () => {
+      try {
+        await calendarService.requestPermissions();
+        const availability = await calendarService.getAvailability();
+        setCalendarAvailability(availability);
+        console.log('[HomeScreen] Calendar availability:', availability);
+      } catch (error) {
+        console.error('[HomeScreen] Calendar init failed:', error);
+      }
+    };
+    initCalendar();
+  }, []);
+
+  useEffect(() => {
+    const freeMinutes = calendarAvailability?.totalFreeMinutes;
+    const result = analysisService.analyzeDailyState(
+      {
+        date: new Date(),
+        sleepHours: mockBiometrics.sleepHours,
+        sleepQuality: 'fair',
+        hrv: mockBiometrics.hrv,
+        restingHeartRate: 62,
+        sorenessRating: mockBiometrics.sorenessRating,
+        stressRating: mockBiometrics.stressRating,
+      },
+      undefined,
+      0,
+      freeMinutes
+    );
     setRecoveryStatus(result);
     console.log('[HomeScreen] Recovery analysis:', result);
-  }, [mockBiometrics]);
+  }, [mockBiometrics, calendarAvailability]);
 
   useFocusEffect(
     useCallback(() => {
@@ -318,7 +340,11 @@ export default function HomeScreen() {
           </StatusGlassCard>
           <StatusGlassCard variant="thin" style={styles.smallCard}>
             <Calendar color="rgba(255,255,255,0.6)" size={20} />
-            <Text style={styles.statValue}>45m</Text>
+            <Text style={styles.statValue}>
+              {calendarAvailability 
+                ? calendarService.formatFreeTime(calendarAvailability.totalFreeMinutes)
+                : '...'}
+            </Text>
             <Text style={styles.statLabel}>Free</Text>
           </StatusGlassCard>
         </View>

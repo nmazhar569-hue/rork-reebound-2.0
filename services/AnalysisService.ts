@@ -14,7 +14,7 @@ export type StatusColor = 'GREEN' | 'YELLOW' | 'RED';
 
 export interface RecoveryFlag {
   id: string;
-  type: 'SLEEP' | 'VOLUME' | 'INTENSITY' | 'STRESS' | 'HRV';
+  type: 'SLEEP' | 'VOLUME' | 'INTENSITY' | 'STRESS' | 'HRV' | 'TIME';
   severity: 'LOW' | 'MEDIUM' | 'CRITICAL';
   message: string;
 }
@@ -33,7 +33,8 @@ export class AnalysisService {
   public analyzeDailyState(
     todaysBiometrics: DailyBiometrics,
     lastWorkout?: WorkoutSession,
-    weeklyVolumeAverage: number = 0
+    weeklyVolumeAverage: number = 0,
+    freeMinutes?: number
   ): RecoveryAnalysis {
     const flags: RecoveryFlag[] = [];
     let recoveryScore = 100;
@@ -122,6 +123,33 @@ export class AnalysisService {
         severity: 'LOW',
         message: `Moderate soreness present.`
       });
+    }
+
+    // RULE 6: Time Crunch (Calendar Integration)
+    if (freeMinutes !== undefined) {
+      if (freeMinutes < 20) {
+        recoveryScore -= 10;
+        flags.push({
+          id: 'time_critical',
+          type: 'TIME',
+          severity: 'CRITICAL',
+          message: `No time for training today. Only ${freeMinutes}m free.`
+        });
+      } else if (freeMinutes < 45) {
+        flags.push({
+          id: 'time_crunch',
+          type: 'TIME',
+          severity: 'MEDIUM',
+          message: `Tight schedule detected. ${freeMinutes}m available. Consider a quick session.`
+        });
+      } else if (freeMinutes < 60) {
+        flags.push({
+          id: 'time_moderate',
+          type: 'TIME',
+          severity: 'LOW',
+          message: `${freeMinutes}m window available. Standard session fits.`
+        });
+      }
     }
 
     // Clamp score between 0-100
