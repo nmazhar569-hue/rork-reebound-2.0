@@ -772,3 +772,18 @@ export interface RoutineWarning {
   message: string;
   biomechanicalReason: string;
 }
+
+// ============ RECOVERY SESSION TYPES ============
+
+export interface RecoverySession {
+  id: string;
+  date: string;
+  routineId: string;
+  routineName: string;
+  durationMinutes: number;
+  painLevelBefore: number;
+  painLevelAfter: number;
+  completedSteps: number;
+  totalSteps: number;
+  completedAt: string;
+}

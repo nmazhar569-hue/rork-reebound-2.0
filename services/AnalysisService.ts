@@ -1,4 +1,4 @@
-import { WorkoutSession, SleepData, UserProfile } from '@/types';
+import { WorkoutSession, SleepData, UserProfile, RecoverySession } from '@/types';
 
 export interface DailyBiometrics {
   date: Date;
@@ -35,7 +35,8 @@ export class AnalysisService {
     lastWorkout?: WorkoutSession,
     weeklyVolumeAverage: number = 0,
     freeMinutes?: number,
-    userProfile?: UserProfile | null
+    userProfile?: UserProfile | null,
+    todayRecoverySession?: RecoverySession | null
   ): RecoveryAnalysis {
     const flags: RecoveryFlag[] = [];
     let recoveryScore = 100;
@@ -188,6 +189,50 @@ export class AnalysisService {
           type: 'TIME',
           severity: 'LOW',
           message: `${freeMinutes}m window available. Standard session fits.`
+        });
+      }
+    }
+
+    // RULE 7: Recovery Session Boost (The Cybernetic Loop)
+    if (todayRecoverySession) {
+      const painImprovement = todayRecoverySession.painLevelBefore - todayRecoverySession.painLevelAfter;
+      
+      console.log('[AnalysisService] Recovery session detected:', todayRecoverySession.routineName);
+      console.log('[AnalysisService] Pain change:', todayRecoverySession.painLevelBefore, '->', todayRecoverySession.painLevelAfter);
+      
+      if (painImprovement > 0) {
+        // Pain improved - boost recovery score
+        const boost = Math.min(15, painImprovement * 5); // Up to +15 points
+        recoveryScore += boost;
+        
+        // Remove high pain flags since user treated it
+        const painFlagIndex = flags.findIndex(f => f.id === 'soreness_high' || f.id === 'soreness_moderate');
+        if (painFlagIndex !== -1) {
+          flags.splice(painFlagIndex, 1);
+        }
+        
+        flags.push({
+          id: 'recovery_boost',
+          type: 'INTENSITY',
+          severity: 'LOW',
+          message: `Recovery session effective! Pain reduced by ${painImprovement} points after ${todayRecoverySession.routineName}.`
+        });
+      } else if (painImprovement === 0) {
+        // Pain stayed same - mild positive
+        recoveryScore += 5;
+        flags.push({
+          id: 'recovery_maintained',
+          type: 'INTENSITY',
+          severity: 'LOW',
+          message: `Recovery session completed. Pain level maintained at ${todayRecoverySession.painLevelAfter}/10.`
+        });
+      } else {
+        // Pain increased - note but don't penalize (user tried)
+        flags.push({
+          id: 'recovery_monitor',
+          type: 'INTENSITY',
+          severity: 'MEDIUM',
+          message: `Pain increased after ${todayRecoverySession.routineName}. Consider a gentler approach or consult a professional.`
         });
       }
     }

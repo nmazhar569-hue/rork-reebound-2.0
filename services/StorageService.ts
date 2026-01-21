@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { WorkoutSession, UserProfile } from '@/types';
+import { WorkoutSession, UserProfile, RecoverySession } from '@/types';
 
 const STORAGE_KEY = '@ai_rebound_history';
 const PROFILE_KEY = '@ai_rebound_profile';
+const RECOVERY_SESSION_KEY = '@ai_rebound_recovery_sessions';
 
 class StorageService {
   async saveWorkout(session: WorkoutSession): Promise<void> {
@@ -138,6 +139,72 @@ class StorageService {
     } catch (error) {
       console.error('[StorageService] Error loading user profile:', error);
       return null;
+    }
+  }
+
+  async saveRecoverySession(session: RecoverySession): Promise<void> {
+    try {
+      const sessions = await this.getRecoverySessions();
+      const updated = [session, ...sessions];
+      await AsyncStorage.setItem(RECOVERY_SESSION_KEY, JSON.stringify(updated));
+      console.log('[StorageService] Recovery session saved:', session.id);
+      console.log('[StorageService] Pain before:', session.painLevelBefore, '-> after:', session.painLevelAfter);
+    } catch (error) {
+      console.error('[StorageService] Error saving recovery session:', error);
+      throw error;
+    }
+  }
+
+  async getRecoverySessions(): Promise<RecoverySession[]> {
+    try {
+      const data = await AsyncStorage.getItem(RECOVERY_SESSION_KEY);
+      if (!data) {
+        console.log('[StorageService] No recovery sessions found');
+        return [];
+      }
+      const sessions = JSON.parse(data) as RecoverySession[];
+      console.log('[StorageService] Loaded recovery sessions:', sessions.length);
+      return sessions;
+    } catch (error) {
+      console.error('[StorageService] Error loading recovery sessions:', error);
+      return [];
+    }
+  }
+
+  async getTodayRecoverySession(): Promise<RecoverySession | null> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const sessions = await this.getRecoverySessions();
+      const todaySession = sessions.find(s => s.date === today);
+      if (todaySession) {
+        console.log('[StorageService] Found recovery session from today:', todaySession.routineName);
+      }
+      return todaySession || null;
+    } catch (error) {
+      console.error('[StorageService] Error getting today recovery session:', error);
+      return null;
+    }
+  }
+
+  async getRecoverySessionsByDateRange(startDate: string, endDate: string): Promise<RecoverySession[]> {
+    try {
+      const sessions = await this.getRecoverySessions();
+      const filtered = sessions.filter(s => s.date >= startDate && s.date <= endDate);
+      console.log('[StorageService] Recovery sessions in range:', filtered.length);
+      return filtered;
+    } catch (error) {
+      console.error('[StorageService] Error filtering recovery sessions:', error);
+      return [];
+    }
+  }
+
+  async clearRecoverySessions(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(RECOVERY_SESSION_KEY);
+      console.log('[StorageService] Recovery sessions cleared');
+    } catch (error) {
+      console.error('[StorageService] Error clearing recovery sessions:', error);
+      throw error;
     }
   }
 }
