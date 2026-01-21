@@ -1,5 +1,5 @@
 import { router, useRouter, useFocusEffect } from 'expo-router';
-import { Bell, ChevronRight, Utensils, Activity, Play, Sparkles } from 'lucide-react-native';
+import { Bell, ChevronRight, Utensils, Activity, Play, Sparkles, Moon, Heart, Calendar, ArrowRight } from 'lucide-react-native';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -19,6 +19,8 @@ import { useRee } from '@/contexts/ReeContext';
 import { haptics } from '@/utils/haptics';
 import { recoveryRoutines } from '@/constants/workoutTemplates';
 import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
+import { StatusGlassCard } from '@/components/StatusGlassCard';
+import { analysisService, RecoveryAnalysis, StatusColor } from '@/services/AnalysisService';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -62,6 +64,35 @@ export default function HomeScreen() {
   const [readinessStep, setReadinessStep] = useState<'pain' | 'confidence'>('pain');
   const [showWelcomeBack, setShowWelcomeBack] = useState(returnStatus.isReturning);
   const [hasNotifications] = useState(true);
+  const [recoveryStatus, setRecoveryStatus] = useState<RecoveryAnalysis | null>(null);
+
+  const mockBiometrics = useMemo(() => {
+    const painLevel = todayReadiness?.painLevel ?? 3;
+    const sleepHours = 6.5;
+    const hrvValue = painLevel > 6 ? 35 : painLevel > 3 ? 45 : 55;
+    const stressLevel = painLevel > 5 ? 7 : 4;
+    
+    return {
+      sleepHours,
+      hrv: hrvValue,
+      stressRating: stressLevel,
+      sorenessRating: painLevel,
+    };
+  }, [todayReadiness]);
+
+  useEffect(() => {
+    const result = analysisService.analyzeDailyState({
+      date: new Date(),
+      sleepHours: mockBiometrics.sleepHours,
+      sleepQuality: 'fair',
+      hrv: mockBiometrics.hrv,
+      restingHeartRate: 62,
+      sorenessRating: mockBiometrics.sorenessRating,
+      stressRating: mockBiometrics.stressRating,
+    });
+    setRecoveryStatus(result);
+    console.log('[HomeScreen] Recovery analysis:', result);
+  }, [mockBiometrics]);
 
   useFocusEffect(
     useCallback(() => {
@@ -150,6 +181,12 @@ export default function HomeScreen() {
     return 'Take the score and hours, sleep.';
   };
 
+  const getStatusColor = (color: StatusColor): string => {
+    if (color === 'GREEN') return '#22C55E';
+    if (color === 'YELLOW') return '#EAB308';
+    return '#EF4444';
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -231,6 +268,51 @@ export default function HomeScreen() {
             )}
           </GlassCard>
         )}
+
+        {recoveryStatus && (
+          <StatusGlassCard
+            variant="hero"
+            statusColor={recoveryStatus.color}
+            style={styles.heroCard}
+          >
+            <View style={styles.heroContent}>
+              <View style={styles.heroLeft}>
+                <Text style={styles.heroLabel}>SYSTEM STATUS</Text>
+                <Text style={styles.heroTitle}>
+                  {analysisService.getActionLabel(recoveryStatus.recommendedAction)}
+                </Text>
+              </View>
+              <View style={[styles.scoreCircle, { borderColor: getStatusColor(recoveryStatus.color) }]}>
+                <Text style={[styles.scoreText, { color: getStatusColor(recoveryStatus.color) }]}>
+                  {recoveryStatus.score}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.agentMessage}>
+              <Text style={styles.agentText}>
+                {recoveryStatus.flags[0]?.message || 'All systems go. You are primed for high intensity.'}
+              </Text>
+            </View>
+          </StatusGlassCard>
+        )}
+
+        <View style={styles.briefRow}>
+          <StatusGlassCard variant="thin" style={styles.smallCard}>
+            <Moon color="rgba(255,255,255,0.6)" size={20} />
+            <Text style={styles.statValue}>{mockBiometrics.sleepHours}h</Text>
+            <Text style={styles.statLabel}>Sleep</Text>
+          </StatusGlassCard>
+          <StatusGlassCard variant="thin" style={styles.smallCard}>
+            <Heart color="rgba(255,255,255,0.6)" size={20} />
+            <Text style={styles.statValue}>{mockBiometrics.hrv}</Text>
+            <Text style={styles.statLabel}>HRV (ms)</Text>
+          </StatusGlassCard>
+          <StatusGlassCard variant="thin" style={styles.smallCard}>
+            <Calendar color="rgba(255,255,255,0.6)" size={20} />
+            <Text style={styles.statValue}>45m</Text>
+            <Text style={styles.statLabel}>Free</Text>
+          </StatusGlassCard>
+        </View>
 
         <GlassCard style={styles.focusCard}>
           <View style={styles.focusCardInner}>
@@ -526,6 +608,78 @@ const styles = StyleSheet.create({
     fontSize: 15, 
     fontWeight: '600' as const, 
     color: liquidGlass.text.primary,
+  },
+  heroCard: {
+    minHeight: 160,
+    marginBottom: 20,
+  },
+  heroContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  heroLeft: {
+    flex: 1,
+  },
+  heroLabel: {
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+    fontSize: 11,
+    letterSpacing: 1.5,
+    fontWeight: '600' as const,
+  },
+  heroTitle: {
+    color: liquidGlass.text.primary,
+    fontSize: 22,
+    fontWeight: '700' as const,
+    marginTop: 6,
+  },
+  scoreCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  scoreText: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+  },
+  agentMessage: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  agentText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  briefRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    gap: 10,
+  },
+  smallCard: {
+    flex: 1,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statValue: {
+    color: liquidGlass.text.primary,
+    fontSize: 18,
+    fontWeight: '700' as const,
+  },
+  statLabel: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 11,
+    fontWeight: '500' as const,
   },
   focusCard: {
     marginBottom: 24,
