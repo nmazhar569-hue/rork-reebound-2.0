@@ -246,11 +246,26 @@ export interface SetLog {
   reps?: number;
   completed: boolean;
   timestamp?: string;
+  rpe?: number;
 }
 
 export interface ExerciseLog {
   exerciseId: string;
+  exerciseName?: string;
   sets: SetLog[];
+  notes?: string;
+}
+
+export interface WorkoutSession {
+  id: string;
+  date: string;
+  durationMinutes: number;
+  totalVolume: number;
+  perceivedStrain: number;
+  exercises: ExerciseLog[];
+  sleepHoursPrior?: number;
+  stressLevel?: 'Low' | 'Medium' | 'High';
+  completedAt?: string;
 }
 
 export interface Exercise {
