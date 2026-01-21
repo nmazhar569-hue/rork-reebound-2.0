@@ -8,40 +8,6 @@ import colors from "@/constants/colors";
 import { ReeFloatingButton } from "@/components/ReeFloatingButton";
 import { useRee } from "@/contexts/ReeContext";
 import { ReeScreenContext } from "@/types";
-modeToggleContainer: {
-  flexDirection: 'row',
-  gap: 8,
-  paddingHorizontal: 16,
-  paddingVertical: 8,
-  backgroundColor: colors.surface,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.borderLight,
-},
-
-modeChip: {
-  paddingHorizontal: 14,
-  paddingVertical: 6,
-  borderRadius: 16,
-  borderWidth: 1,
-  borderColor: colors.borderLight,
-  backgroundColor: colors.background,
-},
-
-modeChipActive: {
-  backgroundColor: colors.primary + '15',
-  borderColor: colors.primary,
-},
-
-modeChipText: {
-  fontSize: 13,
-  fontWeight: '600',
-  color: colors.textSecondary,
-},
-
-modeChipTextActive: {
-  color: colors.primary,
-},
-
 
 export default function TabLayout() {
   const segments = useSegments();
