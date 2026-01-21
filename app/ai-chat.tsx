@@ -10,13 +10,18 @@ import {
   Platform,
   ActivityIndicator,
   Keyboard,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { X, Send, Sparkles } from 'lucide-react-native';
+import { X, Send, Sparkles, ChevronDown } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
-import colors from '@/constants/colors';
+import { liquidGlass, glassShadows } from '@/constants/liquidGlass';
 import { useApp } from '@/contexts/AppContext';
+import { useHealth } from '@/contexts/HealthContext';
 import { useRorkAgent } from '@rork-ai/toolkit-sdk';
 import { REE_SYSTEM_PROMPT } from '@/constants/reeBehavior';
 
@@ -27,25 +32,46 @@ export default function AIChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { userProfile, getTodayLog, getTodayWorkout } = useApp();
+  const { getTodaySteps, getTodaySleep, calculateReadinessFactors, isConnected: isHealthConnected } = useHealth();
   const todayLog = getTodayLog();
   const todayWorkout = getTodayWorkout();
 
   const [inputText, setInputText] = useState('');
   const [hasInitialized, setHasInitialized] = useState(false);
   const [mode, setMode] = useState<'basic' | 'deep'>('basic');
+  const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
+  
+  
+  const scrollButtonAnim = useRef(new Animated.Value(0)).current;
+
+  const todaySteps = getTodaySteps();
+  const todaySleep = getTodaySleep();
+  const readinessFactors = calculateReadinessFactors(todayLog?.painLevel, todayLog?.confidenceLevel === 1 ? 'low' : todayLog?.confidenceLevel === 3 ? 'high' : 'medium');
+
+  const healthContext = isHealthConnected ? `
+Health Data (from connected device):
+- Today's Steps: ${todaySteps}
+- Last Sleep: ${todaySleep ? `${(todaySleep.durationMinutes / 60).toFixed(1)} hours (${todaySleep.quality || 'quality unknown'})` : 'Not recorded'}
+- Readiness Score: ${readinessFactors.overallScore}/100
+- Recovery Insights: ${readinessFactors.insights.join(', ') || 'None'}
+` : '';
 
   const userContext = userProfile
     ? `
 User Profile:
+- Name: ${userProfile.questionnaireProfile?.preferredName || 'User'}
 - Injury: ${userProfile.injuryType}
 - Sport: ${userProfile.sportType || 'Not specified'}
 - Training Style: ${userProfile.trainingStyle}
 - Weekly Frequency: ${userProfile.weeklyFrequency} days/week
+- Fitness Level: ${userProfile.questionnaireProfile?.fitnessLevel || 'Not specified'}
+- Goals: ${userProfile.questionnaireProfile?.primaryGoals?.join(', ') || 'Not specified'}
 
 Current Status:
 - Today's Workout: ${todayWorkout?.title || 'None scheduled'}
 - Pain Level: ${todayLog?.painLevel ?? 'Not recorded'}
 - Confidence: ${todayLog?.confidenceLevel ?? 'Not recorded'}
+${healthContext}
 `
     : 'User profile not available yet.';
 
@@ -113,15 +139,37 @@ ${userContext}
   }, [params.initialQuery, hasInitialized, messages.length, status, sendMessage]);
 
   useEffect(() => {
-    if (scrollViewRef.current) {
+    if (!isUserScrolledUp && scrollViewRef.current) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages, status]);
+  }, [messages, status, isUserScrolledUp]);
+
+  useEffect(() => {
+    Animated.timing(scrollButtonAnim, {
+      toValue: isUserScrolledUp ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isUserScrolledUp, scrollButtonAnim]);
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+    
+    const isNearBottom = distanceFromBottom < 100;
+    setIsUserScrolledUp(!isNearBottom);
+  }, []);
+
+  const handleScrollToBottom = useCallback(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+    setIsUserScrolledUp(false);
+  }, []);
 
   const handleSend = useCallback(() => {
     if (!inputText.trim() || status === 'streaming') return;
+    setIsUserScrolledUp(false);
     sendMessage(inputText.trim());
     setInputText('');
     Keyboard.dismiss();
@@ -129,11 +177,21 @@ ${userContext}
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <LinearGradient
+        colors={liquidGlass.background.gradient}
+        style={StyleSheet.absoluteFill}
+      />
+      
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <View style={styles.iconContainer}>
-            <Sparkles size={18} color={colors.surface} />
-          </View>
+          <LinearGradient
+            colors={liquidGlass.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconContainer}
+          >
+            <Sparkles size={18} color={liquidGlass.text.inverse} />
+          </LinearGradient>
           <View>
             <Text style={styles.headerTitle}>Ree</Text>
             <Text style={styles.headerSubtitle}>Training companion</Text>
@@ -144,7 +202,7 @@ ${userContext}
           style={styles.closeButton}
           accessibilityLabel="Close chat"
         >
-          <X size={22} color={colors.textSecondary} />
+          <X size={22} color={liquidGlass.text.secondary} />
         </TouchableOpacity>
       </View>
 
@@ -184,51 +242,82 @@ ${userContext}
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.chatContainer}
-        contentContainerStyle={styles.chatContent}
-        keyboardDismissMode="interactive"
-      >
-        {messages
-          .filter(m => m.role !== 'system')
-          .map(m => (
-            <View
-              key={m.id}
-              style={[
-                styles.messageBubble,
-                m.role === 'user' ? styles.userBubble : styles.aiBubble,
-              ]}
-            >
-              <Text
+      <View style={styles.chatWrapper}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.chatContainer}
+          contentContainerStyle={styles.chatContent}
+          keyboardDismissMode="interactive"
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          
+        >
+          {messages
+            .filter(m => m.role !== 'system')
+            .map(m => (
+              <View
+                key={m.id}
                 style={[
-                  styles.messageText,
-                  m.role === 'user'
-                    ? styles.userMessageText
-                    : styles.aiMessageText,
+                  styles.messageBubble,
+                  m.role === 'user' ? styles.userBubble : styles.aiBubble,
                 ]}
               >
-                {m.parts.map(p => p.type === 'text' && p.text).join('')}
+                <Text
+                  style={[
+                    styles.messageText,
+                    m.role === 'user'
+                      ? styles.userMessageText
+                      : styles.aiMessageText,
+                  ]}
+                >
+                  {m.parts.map(p => p.type === 'text' && p.text).join('')}
+                </Text>
+              </View>
+            ))}
+
+          {status === 'streaming' && (
+            <View style={[styles.messageBubble, styles.aiBubble]}>
+              <ActivityIndicator size="small" color={liquidGlass.accent.primary} />
+            </View>
+          )}
+
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                Something didn&apos;t load correctly. Try again when ready.
               </Text>
             </View>
-          ))}
+          )}
 
-        {status === 'streaming' && (
-          <View style={[styles.messageBubble, styles.aiBubble]}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
-        )}
+          <View style={{ height: 24 }} />
+        </ScrollView>
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              Something didn't load correctly. Try again when ready.
-            </Text>
-          </View>
-        )}
-
-        <View style={{ height: 24 }} />
-      </ScrollView>
+        <Animated.View
+          style={[
+            styles.scrollToBottomButton,
+            {
+              opacity: scrollButtonAnim,
+              transform: [
+                {
+                  translateY: scrollButtonAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents={isUserScrolledUp ? 'auto' : 'none'}
+        >
+          <TouchableOpacity
+            style={styles.scrollToBottomTouchable}
+            onPress={handleScrollToBottom}
+            activeOpacity={0.8}
+          >
+            <ChevronDown size={20} color={liquidGlass.text.primary} />
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -242,7 +331,7 @@ ${userContext}
           <TextInput
             style={styles.input}
             placeholder="Ask anything…"
-            placeholderTextColor={colors.textTertiary}
+            placeholderTextColor={liquidGlass.text.tertiary}
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -257,7 +346,7 @@ ${userContext}
             onPress={handleSend}
             disabled={!inputText.trim() || status === 'streaming'}
           >
-            <Send size={18} color={colors.surface} />
+            <Send size={18} color={liquidGlass.text.inverse} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -268,7 +357,7 @@ ${userContext}
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: liquidGlass.background.primary,
   },
   header: {
     flexDirection: 'row',
@@ -277,7 +366,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: liquidGlass.border.subtle,
   },
   headerTitleContainer: {
     flexDirection: 'row',
@@ -288,18 +377,17 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: '600',
-    color: colors.text,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.primary,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: colors.textSecondary,
+    color: liquidGlass.text.secondary,
   },
   closeButton: {
     padding: 8,
@@ -309,29 +397,33 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.glassDark,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: liquidGlass.border.subtle,
   },
   modeChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: colors.background,
+    backgroundColor: liquidGlass.surface.glass,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: liquidGlass.border.glass,
   },
   modeChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
+    borderColor: liquidGlass.accent.primary,
   },
   modeChipText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    fontWeight: '500' as const,
+    color: liquidGlass.text.secondary,
   },
   modeChipTextActive: {
-    color: colors.surface,
+    color: liquidGlass.text.inverse,
+  },
+  chatWrapper: {
+    flex: 1,
+    position: 'relative',
   },
   chatContainer: {
     flex: 1,
@@ -347,33 +439,52 @@ const styles = StyleSheet.create({
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
     borderBottomRightRadius: 4,
   },
   aiBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.card,
     borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
   },
   messageText: {
     fontSize: 15,
     lineHeight: 22,
   },
   userMessageText: {
-    color: colors.surface,
+    color: liquidGlass.text.inverse,
   },
   aiMessageText: {
-    color: colors.text,
+    color: liquidGlass.text.primary,
   },
   errorContainer: {
     padding: 12,
-    backgroundColor: colors.dangerMuted,
+    backgroundColor: liquidGlass.status.dangerMuted,
     borderRadius: 8,
   },
   errorText: {
     fontSize: 14,
-    color: colors.danger,
+    color: liquidGlass.status.danger,
     textAlign: 'center',
+  },
+  scrollToBottomButton: {
+    position: 'absolute',
+    bottom: 16,
+    alignSelf: 'center',
+    zIndex: 10,
+  },
+  scrollToBottomTouchable: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: liquidGlass.surface.card,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...glassShadows.soft,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -381,30 +492,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     gap: 12,
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.glassDark,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: liquidGlass.border.subtle,
   },
   input: {
     flex: 1,
     minHeight: 40,
     maxHeight: 120,
-    backgroundColor: colors.background,
+    backgroundColor: liquidGlass.surface.glass,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
-    color: colors.text,
+    color: liquidGlass.text.primary,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
   },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: colors.textTertiary,
+    backgroundColor: liquidGlass.surface.glass,
   },
 });
