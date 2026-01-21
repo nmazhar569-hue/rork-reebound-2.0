@@ -10,6 +10,7 @@ import { HealthProvider } from "@/contexts/HealthContext";
 import { ReeProvider } from "@/contexts/ReeContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { HealthKitProvider } from "@/contexts/HealthKitContext";
+import { AppModeProvider } from "@/contexts/AppModeContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,11 +44,13 @@ export default function RootLayout() {
           <AuthProvider>
             <HealthProvider>
               <HealthKitProvider>
-                <AppProvider>
-                  <ReeProvider>
-                    <RootLayoutNav />
-                  </ReeProvider>
-                </AppProvider>
+                <AppModeProvider>
+                  <AppProvider>
+                    <ReeProvider>
+                      <RootLayoutNav />
+                    </ReeProvider>
+                  </AppProvider>
+                </AppModeProvider>
               </HealthKitProvider>
             </HealthProvider>
           </AuthProvider>

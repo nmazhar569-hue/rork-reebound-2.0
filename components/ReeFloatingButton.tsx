@@ -7,16 +7,32 @@ import {
   Animated,
   Platform,
   Pressable,
-  AccessibilityInfo,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Lightbulb, HelpCircle, BarChart3, X } from 'lucide-react-native';
-import colors, { gradients, borderRadius, shadows, animation } from '@/constants/colors';
+import { BlurView } from 'expo-blur';
+import { Lightbulb, HelpCircle, BarChart3, Dumbbell, Heart, TrendingUp, Apple, Users } from 'lucide-react-native';
+import colors from '@/constants/colors';
+import { modeColors, glass, glassRadius, glassShadows, neutralColors } from '@/constants/modeColors';
 import { haptics } from '@/utils/haptics';
 import { useRee } from '@/contexts/ReeContext';
+import { useAppMode } from '@/contexts/AppModeContext';
 
-interface PopupOption {
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const BUTTON_SIZE = 56;
+const HOLD_DURATION = 500; // ms to hold before showing menu
+
+interface NavigationOption {
+  id: string;
+  label: string;
+  icon: typeof Dumbbell;
+  mode: 'workout' | 'recovery' | 'progress' | 'nutrition' | 'ai';
+  route: string;
+}
+
+interface AIOption {
   id: string;
   label: string;
   icon: typeof Lightbulb;
@@ -26,284 +42,354 @@ interface PopupOption {
 export function ReeFloatingButton() {
   const router = useRouter();
   const { currentInsight, hasUnseenInsight } = useRee();
-  const [isOpen, setIsOpen] = useState(false);
+  const { currentMode, setCurrentMode, theme } = useAppMode();
   
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(0.5)).current;
+  const [showAIMenu, setShowAIMenu] = useState(false);
+  const [showNavMenu, setShowNavMenu] = useState(false);
+  
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const popupAnim = useRef(new Animated.Value(0)).current;
-  const option1Anim = useRef(new Animated.Value(0)).current;
-  const option2Anim = useRef(new Animated.Value(0)).current;
-  const option3Anim = useRef(new Animated.Value(0)).current;
-  const reduceMotion = useRef(false);
+  const aiMenuAnim = useRef(new Animated.Value(0)).current;
+  const navMenuAnim = useRef(new Animated.Value(0)).current;
+  const positionX = useRef(new Animated.Value(SCREEN_WIDTH - BUTTON_SIZE - 20)).current;
+  const positionY = useRef(new Animated.Value(SCREEN_HEIGHT - 180)).current;
   
+  const holdTimer = useRef<NodeJS.Timeout | null>(null);
+  const isDragging = useRef(false);
+  const dragStartPosition = useRef({ x: 0, y: 0 });
+  const DRAG_THRESHOLD = 8;
 
-  useEffect(() => {
-    const startPulse = () => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.parallel([
-            Animated.timing(pulseAnim, {
-              toValue: 1.12,
-              duration: 2400,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacityAnim, {
-              toValue: 0.2,
-              duration: 2400,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.timing(pulseAnim, {
-              toValue: 1,
-              duration: 2400,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacityAnim, {
-              toValue: 0.5,
-              duration: 2400,
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      ).start();
-    };
-
-    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      reduceMotion.current = enabled;
-      if (!enabled && hasUnseenInsight) {
-        startPulse();
-      }
-    });
-  }, [pulseAnim, opacityAnim, hasUnseenInsight]);
-
-  const openPopup = useCallback(() => {
-    setIsOpen(true);
-    haptics.medium();
-    
-    Animated.parallel([
-      Animated.spring(popupAnim, {
-        toValue: 1,
-        tension: animation.spring.tension,
-        friction: animation.spring.friction,
-        useNativeDriver: true,
-      }),
-      Animated.stagger(50, [
-        Animated.spring(option1Anim, {
-          toValue: 1,
-          tension: 50,
-          friction: 8,
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => isDragging.current,
+      
+      onPanResponderGrant: (evt) => {
+        dragStartPosition.current = {
+          x: evt.nativeEvent.pageX,
+          y: evt.nativeEvent.pageY,
+        };
+        isDragging.current = false;
+        
+        // Start hold timer for navigation menu
+        holdTimer.current = setTimeout(() => {
+          if (!isDragging.current) {
+            haptics.medium();
+            openNavMenu();
+          }
+        }, HOLD_DURATION);
+        
+        // Press animation
+        Animated.spring(scaleAnim, {
+          toValue: 0.9,
+          tension: 300,
+          friction: 10,
           useNativeDriver: true,
-        }),
-        Animated.spring(option2Anim, {
+        }).start();
+      },
+      
+      onPanResponderMove: (evt, gestureState) => {
+        const deltaX = Math.abs(evt.nativeEvent.pageX - dragStartPosition.current.x);
+        const deltaY = Math.abs(evt.nativeEvent.pageY - dragStartPosition.current.y);
+        
+        if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+          isDragging.current = true;
+          if (holdTimer.current) {
+            clearTimeout(holdTimer.current);
+            holdTimer.current = null;
+          }
+          
+          // Update position
+          positionX.setValue(gestureState.moveX - BUTTON_SIZE / 2);
+          positionY.setValue(gestureState.moveY - BUTTON_SIZE / 2);
+        }
+      },
+      
+      onPanResponderRelease: () => {
+        if (holdTimer.current) {
+          clearTimeout(holdTimer.current);
+          holdTimer.current = null;
+        }
+        
+        Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 50,
-          friction: 8,
+          tension: 300,
+          friction: 10,
           useNativeDriver: true,
-        }),
-        Animated.spring(option3Anim, {
-          toValue: 1,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-  }, [popupAnim, option1Anim, option2Anim, option3Anim]);
+        }).start();
+        
+        // If not dragging and no menu is open, show AI menu
+        if (!isDragging.current && !showNavMenu) {
+          haptics.light();
+          openAIMenu();
+        }
+        
+        // Snap to nearest edge
+        if (isDragging.current) {
+          const currentX = (positionX as any)._value;
+          const currentY = (positionY as any)._value;
+          
+          // Constrain Y position
+          const maxY = SCREEN_HEIGHT - BUTTON_SIZE - 100;
+          const minY = 60;
+          const constrainedY = Math.max(minY, Math.min(maxY, currentY));
+          
+          // Snap to nearest edge (left or right)
+          const snapToLeft = currentX < SCREEN_WIDTH / 2;
+          const targetX = snapToLeft ? 20 : SCREEN_WIDTH - BUTTON_SIZE - 20;
+          
+          Animated.spring(positionX, {
+            toValue: targetX,
+            tension: 100,
+            friction: 10,
+            useNativeDriver: false,
+          }).start();
+          
+          Animated.spring(positionY, {
+            toValue: constrainedY,
+            tension: 100,
+            friction: 10,
+            useNativeDriver: false,
+          }).start();
+        }
+        
+        setTimeout(() => {
+          isDragging.current = false;
+        }, 100);
+      },
+    })
+  ).current;
 
-  const closePopup = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(popupAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(option1Anim, {
-        toValue: 0,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(option2Anim, {
-        toValue: 0,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(option3Anim, {
-        toValue: 0,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setIsOpen(false);
-    });
-  }, [popupAnim, option1Anim, option2Anim, option3Anim]);
-
-  const handlePressIn = useCallback(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.92,
-      tension: animation.spring.tension,
-      friction: animation.spring.friction,
-      useNativeDriver: true,
-    }).start();
-  }, [scaleAnim]);
-
-  const handlePressOut = useCallback(() => {
-    Animated.spring(scaleAnim, {
+  const openAIMenu = useCallback(() => {
+    setShowAIMenu(true);
+    Animated.spring(aiMenuAnim, {
       toValue: 1,
-      tension: animation.spring.tension,
-      friction: animation.spring.friction,
+      tension: 200,
+      friction: 20,
       useNativeDriver: true,
     }).start();
-  }, [scaleAnim]);
+  }, [aiMenuAnim]);
 
-  const handlePress = useCallback(() => {
-    if (isOpen) {
-      closePopup();
-    } else {
-      openPopup();
-    }
-  }, [isOpen, openPopup, closePopup]);
+  const closeAIMenu = useCallback(() => {
+    Animated.timing(aiMenuAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowAIMenu(false);
+    });
+  }, [aiMenuAnim]);
+
+  const openNavMenu = useCallback(() => {
+    setShowNavMenu(true);
+    Animated.spring(navMenuAnim, {
+      toValue: 1,
+      tension: 200,
+      friction: 20,
+      useNativeDriver: true,
+    }).start();
+  }, [navMenuAnim]);
+
+  const closeNavMenu = useCallback(() => {
+    Animated.timing(navMenuAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowNavMenu(false);
+    });
+  }, [navMenuAnim]);
 
   const handleQuickTip = useCallback(() => {
     haptics.light();
-    closePopup();
+    closeAIMenu();
     const query = currentInsight 
       ? `Give me a quick tip about: ${currentInsight.message}`
       : "Give me a quick wellness tip for today";
     router.push(`/ai-chat?initialQuery=${encodeURIComponent(query)}`);
-  }, [currentInsight, router, closePopup]);
+  }, [currentInsight, router, closeAIMenu]);
 
   const handleAskQuestion = useCallback(() => {
     haptics.light();
-    closePopup();
+    closeAIMenu();
     router.push('/ai-chat');
-  }, [router, closePopup]);
+  }, [router, closeAIMenu]);
 
   const handleViewInsights = useCallback(() => {
     haptics.light();
-    closePopup();
+    closeAIMenu();
     router.push('/ai-chat?initialQuery=Show%20me%20my%20recent%20insights%20and%20progress');
-  }, [router, closePopup]);
+  }, [router, closeAIMenu]);
 
-  const options: PopupOption[] = [
+  const handleNavigationOption = useCallback((option: NavigationOption) => {
+    haptics.medium();
+    setCurrentMode(option.mode);
+    closeNavMenu();
+    router.push(option.route);
+  }, [router, setCurrentMode, closeNavMenu]);
+
+  const navigationOptions: NavigationOption[] = [
+    { id: 'workout', label: 'Workout Plan', icon: Dumbbell, mode: 'workout', route: '/(tabs)/plan' },
+    { id: 'recovery', label: 'Recovery Plan', icon: Heart, mode: 'recovery', route: '/(tabs)/recovery' },
+    { id: 'progress', label: 'Progress Reports', icon: TrendingUp, mode: 'progress', route: '/(tabs)/progress' },
+    { id: 'nutrition', label: 'Nutrition', icon: Apple, mode: 'nutrition', route: '/(tabs)/nutrition' },
+    { id: 'community', label: 'Limbrise Community', icon: Users, mode: 'ai', route: '/(tabs)/' },
+  ];
+
+  const aiOptions: AIOption[] = [
     { id: 'quick-tip', label: 'Quick tip', icon: Lightbulb, action: handleQuickTip },
     { id: 'ask-question', label: 'Ask question', icon: HelpCircle, action: handleAskQuestion },
     { id: 'view-insights', label: 'View insights', icon: BarChart3, action: handleViewInsights },
   ];
 
-  const optionAnims = [option1Anim, option2Anim, option3Anim];
-
   return (
     <>
-      {isOpen && (
-        <Pressable style={styles.overlay} onPress={closePopup}>
-          <Animated.View 
-            style={[
-              styles.popupContainer,
-              {
-                opacity: popupAnim,
-                transform: [
-                  { 
-                    translateY: popupAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [20, 0],
-                    })
-                  }
-                ],
-              }
-            ]}
-          >
-            {options.map((option, index) => {
-              return (
-                <Animated.View
-                  key={option.id}
-                  style={[
-                    styles.optionWrapper,
-                    {
-                      opacity: optionAnims[index],
-                      transform: [
-                        {
-                          translateX: optionAnims[index].interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [20, 0],
-                          }),
-                        },
-                        {
-                          scale: optionAnims[index].interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.8, 1],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.optionButton}
-                    onPress={option.action}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.optionLabel}>{option.label}</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
-          </Animated.View>
-        </Pressable>
+      {/* Overlay for closing menus */}
+      {(showAIMenu || showNavMenu) && (
+        <Pressable 
+          style={styles.overlay} 
+          onPress={() => {
+            if (showAIMenu) closeAIMenu();
+            if (showNavMenu) closeNavMenu();
+          }}
+        />
       )}
       
-      <View style={styles.container}>
-        {!isOpen && (
-          <Animated.View
-            style={[
-              styles.pulseRing,
-              {
-                transform: [{ scale: pulseAnim }],
-                opacity: opacityAnim,
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={gradients.primarySoft}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.pulseGradient}
-            />
-          </Animated.View>
-        )}
-        
-        <Pressable
-          onPress={handlePress}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          accessibilityLabel="Open Ree assistant menu"
-          accessibilityRole="button"
+      {/* AI Quick Menu (Tap) */}
+      {showAIMenu && (
+        <Animated.View 
+          style={[
+            styles.aiMenuContainer,
+            {
+              opacity: aiMenuAnim,
+              transform: [
+                { 
+                  translateY: aiMenuAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0],
+                  })
+                },
+                {
+                  scale: aiMenuAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.9, 1],
+                  })
+                },
+              ],
+            }
+          ]}
         >
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            <LinearGradient
-              colors={isOpen ? [colors.textSecondary, colors.text] : gradients.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.button}
+          {aiOptions.map((option, index) => (
+            <Animated.View
+              key={option.id}
+              style={[
+                {
+                  opacity: aiMenuAnim,
+                  transform: [
+                    {
+                      translateX: aiMenuAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [30, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
             >
-              <View style={styles.inner}>
-                {isOpen ? (
-                  <X size={20} color={colors.surface} strokeWidth={2.5} />
-                ) : (
-                  <View style={styles.icon}>
-                    <Text style={styles.iconText}>R</Text>
-                  </View>
-                )}
-              </View>
-            </LinearGradient>
-          </Animated.View>
-        </Pressable>
+              <TouchableOpacity
+                style={[styles.aiOptionButton]}
+                onPress={option.action}
+                activeOpacity={0.7}
+              >
+                <BlurView intensity={80} style={styles.blurContainer} tint="light">
+                  <option.icon size={18} color={theme.primary} strokeWidth={2} />
+                  <Text style={[styles.aiOptionLabel, { color: neutralColors.text }]}>
+                    {option.label}
+                  </Text>
+                </BlurView>
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+        </Animated.View>
+      )}
+
+      {/* Navigation Menu (Hold) */}
+      {showNavMenu && (
+        <Animated.View 
+          style={[
+            styles.navMenuContainer,
+            {
+              opacity: navMenuAnim,
+              transform: [
+                { 
+                  scale: navMenuAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  })
+                }
+              ],
+            }
+          ]}
+        >
+          <BlurView intensity={90} style={styles.navMenuBlur} tint="light">
+            <View style={styles.navMenuHeader}>
+              <Text style={styles.navMenuTitle}>Navigate to</Text>
+            </View>
+            {navigationOptions.map((option) => {
+              const optionTheme = modeColors[option.mode];
+              return (
+                <TouchableOpacity
+                  key={option.id}
+                  style={styles.navOptionButton}
+                  onPress={() => handleNavigationOption(option)}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={optionTheme.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.navOptionGradient}
+                  >
+                    <option.icon size={20} color="#FFF" strokeWidth={2.5} />
+                  </LinearGradient>
+                  <Text style={[styles.navOptionLabel, { color: neutralColors.text }]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </BlurView>
+        </Animated.View>
+      )}
+      
+      {/* Floating Button */}
+      <Animated.View
+        style={[
+          styles.floatingButton,
+          {
+            left: positionX,
+            top: positionY,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <LinearGradient
+          colors={theme.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.buttonGradient}
+        >
+          <BlurView intensity={40} style={styles.buttonBlur} tint="light">
+            <View style={styles.logoContainer}>
+              <Text style={styles.logoText}>R</Text>
+            </View>
+          </BlurView>
+        </LinearGradient>
         
-        {hasUnseenInsight && !isOpen && (
-          <View style={styles.badge} />
+        {hasUnseenInsight && !showAIMenu && !showNavMenu && (
+          <View style={[styles.badge, { backgroundColor: modeColors.recovery.primary }]} />
         )}
-      </View>
+      </Animated.View>
     </>
   );
 }
@@ -311,97 +397,133 @@ export function ReeFloatingButton() {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 99,
+    zIndex: 98,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pulseRing: {
+  floatingButton: {
     position: 'absolute',
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: glassRadius.full,
+    zIndex: 100,
+    ...glassShadows.heavy,
+  },
+  buttonGradient: {
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: glassRadius.full,
     overflow: 'hidden',
   },
-  pulseGradient: {
+  buttonBlur: {
     flex: 1,
-    borderRadius: 38,
-  },
-  button: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.28,
-        shadowRadius: 14,
-      },
-      android: {
-        elevation: 7,
-      },
-    }),
+    opacity: 0.6,
   },
-  inner: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  logoContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: colors.primary,
+  logoText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: modeColors.workout.primary,
   },
   badge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.accent,
+    top: 4,
+    right: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     borderWidth: 2,
-    borderColor: colors.surface,
+    borderColor: '#FFF',
   },
-  popupContainer: {
+  
+  // AI Menu (quick actions)
+  aiMenuContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 130 : 110,
+    bottom: Platform.OS === 'ios' ? 120 : 100,
     right: 20,
-    alignItems: 'flex-end',
-    gap: 8,
+    zIndex: 99,
+    gap: 10,
   },
-  optionWrapper: {
-    alignItems: 'flex-end',
+  aiOptionButton: {
+    borderRadius: glassRadius.button,
+    overflow: 'hidden',
+    ...glassShadows.medium,
   },
-  optionButton: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: borderRadius.lg,
-    ...shadows.medium,
+  blurContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    minWidth: 140,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    minWidth: 150,
   },
-  optionLabel: {
+  aiOptionLabel: {
     fontSize: 15,
-    fontWeight: '600' as const,
-    color: colors.text,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  
+  // Navigation Menu (hold)
+  navMenuContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -140,
+    marginTop: -180,
+    width: 280,
+    zIndex: 99,
+    borderRadius: glassRadius.large,
+    overflow: 'hidden',
+    ...glassShadows.heavy,
+  },
+  navMenuBlur: {
+    borderRadius: glassRadius.large,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    overflow: 'hidden',
+  },
+  navMenuHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  navMenuTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: neutralColors.text,
+    letterSpacing: -0.2,
+  },
+  navOptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  navOptionGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navOptionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
     letterSpacing: 0.1,
   },
 });
