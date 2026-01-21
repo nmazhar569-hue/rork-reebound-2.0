@@ -5,31 +5,26 @@ import {
   StyleSheet, 
   ScrollView, 
   TouchableOpacity, 
-  TextInput,
-  Modal,
   Dimensions,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   ChevronLeft, 
   ChevronRight, 
   Plus,
-  X,
-  Camera,
-  Mic,
   Zap,
   Flame,
   Clock,
   AlertCircle,
   Sparkles,
+  Camera,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '@/contexts/AppContext';
 import { FoodEntry, NutritionLog, WorkoutIntensityDay, MacroTargets } from '@/types';
 import { haptics } from '@/utils/haptics';
 import { FuelGaugeDashboard } from '@/components/MacroRingChart';
+import { SmartFoodLogger } from '@/components/SmartFoodLogger';
 
 const { width } = Dimensions.get('window');
 
@@ -135,7 +130,6 @@ export default function NutritionScreen() {
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>(todayLog?.nutritionLog?.foodEntries || []);
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [activeMealSlot, setActiveMealSlot] = useState<string | null>(null);
-  const [mealInput, setMealInput] = useState('');
 
   const dateKey = selectedDate.toISOString().split('T')[0];
   
@@ -212,45 +206,29 @@ export default function NutritionScreen() {
     haptics.light();
     setActiveMealSlot(mealId);
     setShowAddMeal(true);
-    setMealInput('');
   }, []);
 
-  const handleAddMeal = useCallback(() => {
-    if (!mealInput.trim() || !activeMealSlot) return;
+  const handleSmartLogSave = useCallback((entry: {
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    inflammationScore?: number;
+  }) => {
+    if (!activeMealSlot) return;
     
     haptics.medium();
     const newEntry: FoodEntry = {
       id: Date.now().toString(),
-      name: mealInput.trim(),
+      name: entry.name,
       timestamp: new Date().toISOString(),
       mealType: activeMealSlot as FoodEntry['mealType'],
-      protein: 0,
-      carbs: 0,
-      fats: 0,
-      calories: 0,
-    };
-    
-    const updated = [...foodEntries, newEntry];
-    setFoodEntries(updated);
-    saveLog(updated);
-    setShowAddMeal(false);
-    setMealInput('');
-    setActiveMealSlot(null);
-  }, [mealInput, activeMealSlot, foodEntries, saveLog]);
-
-  const handleQuickAdd = useCallback((item: typeof RECENT_FOODS[0]) => {
-    if (!activeMealSlot) return;
-    
-    haptics.light();
-    const newEntry: FoodEntry = {
-      id: Date.now().toString(),
-      name: `${item.emoji} ${item.label}`,
-      timestamp: new Date().toISOString(),
-      mealType: activeMealSlot as FoodEntry['mealType'],
-      protein: item.protein,
-      carbs: item.carbs,
-      fats: item.fats,
-      calories: item.calories,
+      protein: entry.protein,
+      carbs: entry.carbs,
+      fats: entry.fats,
+      calories: entry.calories,
+      inflammationScore: entry.inflammationScore,
     };
     
     const updated = [...foodEntries, newEntry];
@@ -259,6 +237,11 @@ export default function NutritionScreen() {
     setShowAddMeal(false);
     setActiveMealSlot(null);
   }, [activeMealSlot, foodEntries, saveLog]);
+
+  const handleCloseModal = useCallback(() => {
+    setShowAddMeal(false);
+    setActiveMealSlot(null);
+  }, []);
 
   const getMealCalories = (entries: FoodEntry[]) => {
     return entries.reduce((sum, e) => sum + (e.calories || 0), 0);
@@ -417,90 +400,12 @@ export default function NutritionScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      <Modal
+      <SmartFoodLogger
         visible={showAddMeal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowAddMeal(false)}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalCard}>
-            <View style={styles.modalHandle} />
-            
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Log {mealSlots.find(m => m.id === activeMealSlot)?.name}
-              </Text>
-              <TouchableOpacity 
-                onPress={() => setShowAddMeal(false)} 
-                style={styles.modalClose}
-              >
-                <X size={24} color="rgba(255,255,255,0.6)" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.aiInputContainer}>
-              <TextInput
-                style={styles.aiInputField}
-                placeholder="I ate 2 eggs and toast..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={mealInput}
-                onChangeText={setMealInput}
-                multiline
-                numberOfLines={3}
-              />
-              <View style={styles.inputActions}>
-                <TouchableOpacity style={styles.inputActionBtn}>
-                  <Camera size={22} color={NEON_LIME} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.inputActionBtn}>
-                  <Mic size={22} color={NEON_LIME} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <Text style={styles.quickAddLabel}>Recents & Favorites</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickAddScroll}
-            >
-              {RECENT_FOODS.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.quickAddItem}
-                  onPress={() => handleQuickAdd(item)}
-                >
-                  <Text style={styles.quickAddEmoji}>{item.emoji}</Text>
-                  <Text style={styles.quickAddName}>{item.label}</Text>
-                  <Text style={styles.quickAddMacro}>{item.protein}g protein</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <TouchableOpacity 
-              style={[styles.addBtn, !mealInput.trim() && styles.addBtnDisabled]}
-              onPress={handleAddMeal}
-              disabled={!mealInput.trim()}
-            >
-              <LinearGradient 
-                colors={mealInput.trim() ? [NEON_LIME, TEAL] : ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.1)']} 
-                style={styles.addBtnGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Plus size={18} color={mealInput.trim() ? '#000' : 'rgba(255,255,255,0.3)'} />
-                <Text style={[styles.addBtnText, !mealInput.trim() && styles.addBtnTextDisabled]}>
-                  Add to {mealSlots.find(m => m.id === activeMealSlot)?.name}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        onClose={handleCloseModal}
+        onSave={handleSmartLogSave}
+        mealName={mealSlots.find(m => m.id === activeMealSlot)?.name || 'Meal'}
+      />
     </View>
   );
 }
@@ -784,132 +689,5 @@ const styles = StyleSheet.create({
   bottomSpacer: { 
     height: 40,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: '#0A0A0A',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    paddingBottom: 40,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    borderBottomWidth: 0,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-  },
-  modalClose: {
-    padding: 4,
-  },
-  aiInputContainer: {
-    backgroundColor: BG_CARD,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  aiInputField: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 12,
-    fontSize: 16,
-    color: '#FFFFFF',
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  inputActions: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-  },
-  inputActionBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(204,255,0,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickAddLabel: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 13,
-    fontWeight: '600' as const,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  quickAddScroll: {
-    paddingBottom: 8,
-    gap: 12,
-  },
-  quickAddItem: {
-    backgroundColor: BG_CARD,
-    borderRadius: 16,
-    padding: 14,
-    alignItems: 'center',
-    minWidth: 100,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-  },
-  quickAddEmoji: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  quickAddName: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600' as const,
-    textAlign: 'center',
-  },
-  quickAddMacro: {
-    color: NEON_LIME,
-    fontSize: 11,
-    marginTop: 4,
-  },
-  addBtn: {
-    borderRadius: 50,
-    overflow: 'hidden',
-    marginTop: 20,
-  },
-  addBtnGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 50,
-  },
-  addBtnDisabled: {
-    opacity: 0.6,
-  },
-  addBtnText: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: '#000000',
-  },
-  addBtnTextDisabled: {
-    color: 'rgba(255,255,255,0.3)',
-  },
+  
 });
