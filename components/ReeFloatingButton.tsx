@@ -441,16 +441,18 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     backgroundColor: colors.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderRadius: borderRadius.lg,
     ...shadows.medium,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    minWidth: 140,
   },
   optionLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600' as const,
     color: colors.text,
+    letterSpacing: 0.1,
   },
 });

@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { ChevronRight, RefreshCw, TrendingUp, Calendar, Dumbbell } from 'lucide-react-native';
+import { ChevronRight, RefreshCw, TrendingUp, Calendar, Dumbbell, Settings } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import { Card, PageHeader, ProgressBar } from '@/components/ui';
 import { BodyDiagram, MuscleGroupId } from '@/components/BodyDiagram';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import colors, { borderRadius, shadows, layout } from '@/constants/colors';
 import { haptics } from '@/utils/haptics';
 
@@ -100,6 +101,7 @@ const MOCK_MUSCLE_DATA: Record<MuscleGroupId, {
 export default function ProgressScreen() {
   const { dailyLogs, workoutPlan } = useApp();
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroupId | null>(null);
+  const [showRetakeConfirm, setShowRetakeConfirm] = useState(false);
 
   const weeklyData = useMemo(() => {
     const now = new Date();
@@ -132,12 +134,35 @@ export default function ProgressScreen() {
     setSelectedMuscle(muscle === selectedMuscle ? null : muscle);
   };
 
+  const handleRetakePress = () => {
+    haptics.light();
+    setShowRetakeConfirm(true);
+  };
+
+  const handleConfirmRetake = () => {
+    setShowRetakeConfirm(false);
+    router.push('/onboarding');
+  };
+
   const muscleData = selectedMuscle ? MOCK_MUSCLE_DATA[selectedMuscle] : null;
   const progressPercentage = weeklyData.totalWorkouts > 0 ? (weeklyData.completedWorkouts / weeklyData.totalWorkouts) * 100 : 0;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <PageHeader title="Progress" subtitle="Track your strength journey" />
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <PageHeader title="Progress" subtitle="Track your strength journey" />
+        </View>
+        <TouchableOpacity
+          style={styles.settingsIconButton}
+          onPress={() => {
+            haptics.light();
+            router.push('/settings');
+          }}
+        >
+          <Settings size={22} color={colors.text} />
+        </TouchableOpacity>
+      </View>
 
       <Card style={styles.narrativeCard}>
         <Text style={styles.narrativeText}>{narrative}</Text>
@@ -245,7 +270,7 @@ export default function ProgressScreen() {
 
       <View style={styles.settingsSection}>
         <Text style={styles.settingsSectionTitle}>Settings</Text>
-        <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/onboarding')}>
+        <TouchableOpacity style={styles.settingsButton} onPress={handleRetakePress}>
           <View style={styles.settingsIcon}>
             <RefreshCw size={22} color={colors.primary} />
           </View>
@@ -257,6 +282,17 @@ export default function ProgressScreen() {
         </TouchableOpacity>
       </View>
 
+      <ConfirmDialog
+        visible={showRetakeConfirm}
+        title="Retake Assessment?"
+        message="This will reset your profile and take you back to the onboarding process. Your progress data will be preserved."
+        confirmText="Retake"
+        cancelText="Cancel"
+        type="warning"
+        onConfirm={handleConfirmRetake}
+        onCancel={() => setShowRetakeConfirm(false)}
+      />
+
       <View style={styles.bottomSpacer} />
     </ScrollView>
   );
@@ -265,6 +301,22 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: layout.screenPadding, paddingTop: layout.screenPaddingTop, paddingBottom: 40 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  settingsIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    ...shadows.soft,
+  },
   narrativeCard: { marginBottom: 20 },
   narrativeText: { fontSize: 16, color: colors.text, lineHeight: 25, fontWeight: '500' as const, textAlign: 'center' },
   statsGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
