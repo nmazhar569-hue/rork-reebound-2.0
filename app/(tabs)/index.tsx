@@ -1,5 +1,5 @@
 import { router, useRouter, useFocusEffect } from 'expo-router';
-import { Bell, ChevronRight, Utensils, Activity, Play, Sparkles, Moon, Heart, Calendar, ArrowRight } from 'lucide-react-native';
+import { Bell, ChevronRight, Utensils, Activity, Play, Sparkles, Moon, Heart, Calendar, ArrowRight, User } from 'lucide-react-native';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -243,10 +243,24 @@ export default function HomeScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.logoRow}>
-            <View style={styles.logoIcon}>
-              <Text style={styles.logoText}>R</Text>
+            <TouchableOpacity 
+              style={styles.userAvatarBtn}
+              onPress={() => {
+                haptics.light();
+                routerInstance.push('/profile');
+              }}
+              testID="profile-button"
+            >
+              <Text style={styles.userAvatarText}>
+                {userProfile?.questionnaireProfile?.preferredName?.charAt(0).toUpperCase() || 'R'}
+              </Text>
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.greetingText}>Welcome back</Text>
+              <Text style={styles.logoTitle}>
+                {userProfile?.questionnaireProfile?.preferredName || 'Athlete'}
+              </Text>
             </View>
-            <Text style={styles.logoTitle}>Reebound</Text>
           </View>
           <TouchableOpacity 
             style={styles.notificationBtn} 
@@ -505,23 +519,28 @@ const styles = StyleSheet.create({
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+  userAvatarBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: liquidGlass.accent.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoText: {
+  userAvatarText: {
     fontSize: 18,
     fontWeight: '800' as const,
     color: liquidGlass.text.inverse,
   },
+  greetingText: {
+    fontSize: 13,
+    color: liquidGlass.text.tertiary,
+    marginBottom: 2,
+  },
   logoTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700' as const,
     color: liquidGlass.text.primary,
     letterSpacing: -0.3,
