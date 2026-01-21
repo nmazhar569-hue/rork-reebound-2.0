@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import Svg, { Path, Circle, G } from 'react-native-svg';
-import colors from '@/constants/colors';
+import { liquidGlass } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -35,88 +35,21 @@ interface MuscleRegion {
   r?: number;
 }
 
-// Front view muscle regions
 const FRONT_MUSCLES: MuscleRegion[] = [
-  // Chest
-  {
-    id: 'chest',
-    name: 'Chest',
-    cx: 140,
-    cy: 130,
-    r: 25,
-  },
-  // Shoulders (left and right as circles)
-  {
-    id: 'shoulders',
-    name: 'Shoulders',
-    cx: 100,
-    cy: 110,
-    r: 18,
-  },
-  // Biceps
-  {
-    id: 'biceps',
-    name: 'Biceps',
-    cx: 85,
-    cy: 160,
-    r: 14,
-  },
-  // Triceps
-  {
-    id: 'triceps',
-    name: 'Triceps',
-    cx: 75,
-    cy: 165,
-    r: 12,
-  },
-  // Abs
-  {
-    id: 'abs',
-    name: 'Abs',
-    path: 'M 120 170 L 160 170 L 160 220 L 120 220 Z',
-  },
-  // Obliques
-  {
-    id: 'obliques',
-    name: 'Obliques',
-    cx: 110,
-    cy: 195,
-    r: 12,
-  },
-  // Quads
-  {
-    id: 'quads',
-    name: 'Quads',
-    path: 'M 110 240 L 140 240 L 145 320 L 105 320 Z',
-  },
-  // Calves
-  {
-    id: 'calves',
-    name: 'Calves',
-    path: 'M 115 340 L 135 340 L 135 390 L 115 390 Z',
-  },
+  { id: 'chest', name: 'Chest', cx: 140, cy: 130, r: 25 },
+  { id: 'shoulders', name: 'Shoulders', cx: 100, cy: 110, r: 18 },
+  { id: 'biceps', name: 'Biceps', cx: 85, cy: 160, r: 14 },
+  { id: 'triceps', name: 'Triceps', cx: 75, cy: 165, r: 12 },
+  { id: 'abs', name: 'Abs', path: 'M 120 170 L 160 170 L 160 220 L 120 220 Z' },
+  { id: 'obliques', name: 'Obliques', cx: 110, cy: 195, r: 12 },
+  { id: 'quads', name: 'Quads', path: 'M 110 240 L 140 240 L 145 320 L 105 320 Z' },
+  { id: 'calves', name: 'Calves', path: 'M 115 340 L 135 340 L 135 390 L 115 390 Z' },
 ];
 
-// Back view muscle regions
 const BACK_MUSCLES: MuscleRegion[] = [
-  // Back (upper and mid)
-  {
-    id: 'back',
-    name: 'Back',
-    path: 'M 100 100 L 180 100 L 170 180 L 110 180 Z',
-  },
-  // Glutes
-  {
-    id: 'glutes',
-    name: 'Glutes',
-    path: 'M 110 220 L 170 220 L 165 260 L 115 260 Z',
-  },
-  // Hamstrings
-  {
-    id: 'hamstrings',
-    name: 'Hamstrings',
-    path: 'M 110 265 L 140 265 L 145 330 L 105 330 Z',
-  },
+  { id: 'back', name: 'Back', path: 'M 100 100 L 180 100 L 170 180 L 110 180 Z' },
+  { id: 'glutes', name: 'Glutes', path: 'M 110 220 L 170 220 L 165 260 L 115 260 Z' },
+  { id: 'hamstrings', name: 'Hamstrings', path: 'M 110 265 L 140 265 L 145 330 L 105 330 Z' },
 ];
 
 export function BodyDiagram({ selectedMuscle, onMuscleSelect }: BodyDiagramProps) {
@@ -159,40 +92,19 @@ export function BodyDiagram({ selectedMuscle, onMuscleSelect }: BodyDiagramProps
 
       <View style={styles.diagramContainer}>
         <Svg width={DIAGRAM_WIDTH} height={DIAGRAM_HEIGHT} viewBox="0 0 280 560">
-          {/* Body outline */}
-          <G opacity={0.15}>
-            {/* Head */}
-            <Circle cx="140" cy="50" r="30" fill={colors.textSecondary} />
-            {/* Torso */}
-            <Path
-              d="M 110 80 L 170 80 L 170 230 L 110 230 Z"
-              fill={colors.textSecondary}
-            />
-            {/* Arms */}
-            <Path
-              d="M 70 95 L 110 95 L 110 200 L 80 200 Z"
-              fill={colors.textSecondary}
-            />
-            <Path
-              d="M 170 95 L 210 95 L 200 200 L 170 200 Z"
-              fill={colors.textSecondary}
-            />
-            {/* Legs */}
-            <Path
-              d="M 110 230 L 135 230 L 140 420 L 110 420 Z"
-              fill={colors.textSecondary}
-            />
-            <Path
-              d="M 145 230 L 170 230 L 170 420 L 140 420 Z"
-              fill={colors.textSecondary}
-            />
+          <G opacity={0.2}>
+            <Circle cx="140" cy="50" r="30" fill={liquidGlass.text.secondary} />
+            <Path d="M 110 80 L 170 80 L 170 230 L 110 230 Z" fill={liquidGlass.text.secondary} />
+            <Path d="M 70 95 L 110 95 L 110 200 L 80 200 Z" fill={liquidGlass.text.secondary} />
+            <Path d="M 170 95 L 210 95 L 200 200 L 170 200 Z" fill={liquidGlass.text.secondary} />
+            <Path d="M 110 230 L 135 230 L 140 420 L 110 420 Z" fill={liquidGlass.text.secondary} />
+            <Path d="M 145 230 L 170 230 L 170 420 L 140 420 Z" fill={liquidGlass.text.secondary} />
           </G>
 
-          {/* Interactive muscle regions */}
           {muscles.map((muscle) => {
             const isSelected = selectedMuscle === muscle.id;
-            const fillColor = isSelected ? colors.primary : colors.accent;
-            const opacity = isSelected ? 0.5 : 0.35;
+            const fillColor = isSelected ? liquidGlass.accent.primary : liquidGlass.accent.secondary;
+            const opacity = isSelected ? 0.6 : 0.4;
 
             if (muscle.path) {
               return (
@@ -201,7 +113,7 @@ export function BodyDiagram({ selectedMuscle, onMuscleSelect }: BodyDiagramProps
                     d={muscle.path}
                     fill={fillColor}
                     opacity={opacity}
-                    stroke={isSelected ? colors.primary : colors.accent}
+                    stroke={isSelected ? liquidGlass.accent.primary : liquidGlass.accent.secondary}
                     strokeWidth={isSelected ? 3 : 2}
                   />
                 </G>
@@ -209,7 +121,6 @@ export function BodyDiagram({ selectedMuscle, onMuscleSelect }: BodyDiagramProps
             }
 
             if (muscle.cx && muscle.cy && muscle.r) {
-              // Render as circle for shoulders, biceps, etc.
               return (
                 <G key={muscle.id} onPress={() => handleMusclePress(muscle.id)}>
                   <Circle
@@ -218,21 +129,20 @@ export function BodyDiagram({ selectedMuscle, onMuscleSelect }: BodyDiagramProps
                     r={muscle.r}
                     fill={fillColor}
                     opacity={opacity}
-                    stroke={isSelected ? colors.primary : colors.accent}
+                    stroke={isSelected ? liquidGlass.accent.primary : liquidGlass.accent.secondary}
                     strokeWidth={isSelected ? 3 : 2}
                   />
-                  {/* Mirror for symmetric muscles like shoulders */}
-                  {muscle.id === 'shoulders' || muscle.id === 'biceps' || muscle.id === 'triceps' || muscle.id === 'obliques' ? (
+                  {(muscle.id === 'shoulders' || muscle.id === 'biceps' || muscle.id === 'triceps' || muscle.id === 'obliques') && (
                     <Circle
                       cx={280 - muscle.cx}
                       cy={muscle.cy}
                       r={muscle.r}
                       fill={fillColor}
                       opacity={opacity}
-                      stroke={isSelected ? colors.primary : colors.accent}
+                      stroke={isSelected ? liquidGlass.accent.primary : liquidGlass.accent.secondary}
                       strokeWidth={isSelected ? 3 : 2}
                     />
-                  ) : null}
+                  )}
                 </G>
               );
             }
@@ -245,7 +155,7 @@ export function BodyDiagram({ selectedMuscle, onMuscleSelect }: BodyDiagramProps
       {selectedMuscle && (
         <View style={styles.selectedLabel}>
           <Text style={styles.selectedLabelText}>
-            {muscles.find(m => m.id === selectedMuscle)?.name || 'Selected'}
+            {muscles.find(m => m.id === selectedMuscle)?.name || FRONT_MUSCLES.find(m => m.id === selectedMuscle)?.name || BACK_MUSCLES.find(m => m.id === selectedMuscle)?.name || 'Selected'}
           </Text>
         </View>
       )}
@@ -261,10 +171,12 @@ const styles = StyleSheet.create({
   },
   viewToggle: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceDim,
+    backgroundColor: liquidGlass.surface.glassDark,
     borderRadius: 12,
     padding: 4,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
   },
   viewButton: {
     paddingHorizontal: 24,
@@ -272,46 +184,43 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   viewButtonActive: {
-    backgroundColor: colors.surface,
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: liquidGlass.surface.glass,
   },
   viewButtonText: {
     fontSize: 15,
     fontWeight: '600' as const,
-    color: colors.textSecondary,
+    color: liquidGlass.text.tertiary,
   },
   viewButtonTextActive: {
-    color: colors.text,
+    color: liquidGlass.text.primary,
     fontWeight: '700' as const,
   },
   diagramContainer: {
-    backgroundColor: colors.surfaceDim,
+    backgroundColor: liquidGlass.surface.glassDark,
     borderRadius: 24,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
   },
   selectedLabel: {
     marginTop: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
     borderRadius: 20,
   },
   selectedLabelText: {
     fontSize: 16,
     fontWeight: '700' as const,
-    color: colors.surface,
+    color: liquidGlass.text.inverse,
     letterSpacing: 0.2,
   },
   instruction: {
     marginTop: 16,
     fontSize: 14,
-    color: colors.textTertiary,
+    color: liquidGlass.text.tertiary,
     fontWeight: '500' as const,
     textAlign: 'center',
   },

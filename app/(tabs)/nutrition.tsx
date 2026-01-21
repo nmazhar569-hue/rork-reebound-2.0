@@ -16,9 +16,9 @@ import {
   X,
   Droplet,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '@/contexts/AppContext';
-import { Card } from '@/components/ui';
-import colors, { borderRadius, shadows, layout } from '@/constants/colors';
+import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import { FoodEntry, NutritionLog } from '@/types';
 import { haptics } from '@/utils/haptics';
 
@@ -37,6 +37,14 @@ const QUICK_ADD_OPTIONS = [
 ];
 
 const WATER_GOAL = 8;
+
+function GlassCard({ children, style }: { children: React.ReactNode; style?: any }) {
+  return (
+    <View style={[styles.glassCard, style]}>
+      {children}
+    </View>
+  );
+}
 
 export default function NutritionScreen() {
   const { getTodayLog, logNutrition } = useApp();
@@ -167,17 +175,17 @@ export default function NutritionScreen() {
 
         <View style={styles.dateNav}>
           <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.dateNavBtn}>
-            <ChevronLeft size={20} color={colors.primary} />
+            <ChevronLeft size={20} color={liquidGlass.accent.primary} />
           </TouchableOpacity>
           <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
           <TouchableOpacity onPress={() => navigateDate('next')} style={styles.dateNavBtn}>
-            <ChevronRight size={20} color={colors.primary} />
+            <ChevronRight size={20} color={liquidGlass.accent.primary} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.mealsSection}>
           {mealSlots.map((meal) => (
-            <Card key={meal.id} style={styles.mealCard}>
+            <GlassCard key={meal.id} style={styles.mealCard}>
               <View style={styles.mealHeader}>
                 <Text style={styles.mealName}>{meal.name}</Text>
                 <Text style={styles.mealTime}>{meal.time}</Text>
@@ -196,11 +204,11 @@ export default function NutritionScreen() {
                 onPress={() => handleOpenAddMeal(meal.id)}
               >
                 <View style={styles.addMealIcon}>
-                  <Utensils size={14} color={colors.primary} />
+                  <Utensils size={14} color={liquidGlass.accent.primary} />
                 </View>
                 <Text style={styles.addMealText}>+ Add meal</Text>
               </TouchableOpacity>
-            </Card>
+            </GlassCard>
           ))}
         </View>
 
@@ -215,8 +223,8 @@ export default function NutritionScreen() {
               >
                 <Droplet 
                   size={32} 
-                  color={index < waterCount ? colors.primary : colors.borderLight}
-                  fill={index < waterCount ? colors.primary : 'transparent'}
+                  color={index < waterCount ? liquidGlass.accent.primary : liquidGlass.border.glassLight}
+                  fill={index < waterCount ? liquidGlass.accent.primary : 'transparent'}
                   strokeWidth={1.5}
                 />
               </TouchableOpacity>
@@ -244,9 +252,9 @@ export default function NutritionScreen() {
           <View style={styles.reeAvatar}>
             <Text style={styles.reeAvatarText}>😊</Text>
           </View>
-          <View style={styles.reeBubble}>
+          <GlassCard style={styles.reeBubble}>
             <Text style={styles.reeBubbleText}>No pressure - just awareness</Text>
-          </View>
+          </GlassCard>
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -268,29 +276,31 @@ export default function NutritionScreen() {
                 onPress={() => setShowAddMeal(false)} 
                 style={styles.modalClose}
               >
-                <X size={24} color={colors.textSecondary} />
+                <X size={24} color={liquidGlass.text.secondary} />
               </TouchableOpacity>
             </View>
 
             <TextInput
               style={styles.mealInputField}
               placeholder="What did you have?"
-              placeholderTextColor={colors.textTertiary}
+              placeholderTextColor={liquidGlass.text.tertiary}
               value={mealInput}
               onChangeText={setMealInput}
               autoFocus
             />
 
             <TouchableOpacity 
-              style={[
-                styles.addBtn, 
-                !mealInput.trim() && styles.addBtnDisabled
-              ]}
+              style={[styles.addBtn, !mealInput.trim() && styles.addBtnDisabled]}
               onPress={handleAddMeal}
               disabled={!mealInput.trim()}
             >
-              <Plus size={18} color={colors.surface} />
-              <Text style={styles.addBtnText}>Add</Text>
+              <LinearGradient 
+                colors={mealInput.trim() ? liquidGlass.gradients.button : [liquidGlass.surface.glassDark, liquidGlass.surface.glassDark]} 
+                style={styles.addBtnGradient}
+              >
+                <Plus size={18} color={mealInput.trim() ? liquidGlass.text.inverse : liquidGlass.text.tertiary} />
+                <Text style={[styles.addBtnText, !mealInput.trim() && styles.addBtnTextDisabled]}>Add</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -302,14 +312,14 @@ export default function NutritionScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: colors.background,
+    backgroundColor: liquidGlass.background.primary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: { 
-    padding: layout.screenPadding, 
-    paddingTop: layout.screenPaddingTop, 
+    padding: glassLayout.screenPadding, 
+    paddingTop: glassLayout.screenPaddingTop, 
     paddingBottom: 40,
   },
   header: {
@@ -319,13 +329,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
     letterSpacing: -0.5,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
-    color: colors.textSecondary,
+    color: liquidGlass.text.secondary,
   },
   dateNav: {
     flexDirection: 'row',
@@ -335,21 +345,35 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   dateNavBtn: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: liquidGlass.surface.glass,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dateText: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
+  },
+  glassCard: {
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    padding: 18,
+    ...glassShadows.soft,
   },
   mealsSection: {
     gap: 12,
     marginBottom: 28,
   },
   mealCard: {
-    padding: 18,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 0,
+    backgroundColor: liquidGlass.accent.muted,
+    borderColor: liquidGlass.border.glass,
   },
   mealHeader: {
     flexDirection: 'row',
@@ -360,11 +384,11 @@ const styles = StyleSheet.create({
   mealName: {
     fontSize: 17,
     fontWeight: '600' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
   },
   mealTime: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: liquidGlass.text.tertiary,
   },
   mealEntries: {
     marginBottom: 12,
@@ -372,7 +396,7 @@ const styles = StyleSheet.create({
   },
   entryText: {
     fontSize: 14,
-    color: colors.text,
+    color: liquidGlass.text.primary,
   },
   addMealBtn: {
     flexDirection: 'row',
@@ -383,14 +407,16 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.glass,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addMealText: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: colors.primary,
+    color: liquidGlass.accent.primary,
   },
   waterSection: {
     marginBottom: 28,
@@ -398,7 +424,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
     marginBottom: 14,
   },
   waterDroplets: {
@@ -421,12 +447,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.card,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: borderRadius.full,
+    borderRadius: 50,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: liquidGlass.border.glass,
   },
   quickAddEmoji: {
     fontSize: 16,
@@ -434,7 +460,7 @@ const styles = StyleSheet.create({
   quickAddLabel: {
     fontSize: 14,
     fontWeight: '500' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
   },
   reeMessage: {
     flexDirection: 'row',
@@ -445,7 +471,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primaryMuted,
+    backgroundColor: liquidGlass.accent.muted,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -454,31 +482,28 @@ const styles = StyleSheet.create({
   },
   reeBubble: {
     flex: 1,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    padding: 14,
   },
   reeBubbleText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: liquidGlass.text.secondary,
   },
   bottomSpacer: { 
-    height: layout.tabBarHeight,
+    height: glassLayout.tabBarHeight,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
   modalCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xxl,
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 24,
     padding: 24,
-    ...shadows.lifted,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    ...glassShadows.medium,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -489,35 +514,43 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '600' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
   },
   modalClose: {
     padding: 4,
   },
   mealInputField: {
-    backgroundColor: colors.surfaceDim,
+    backgroundColor: liquidGlass.surface.glassDark,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: borderRadius.lg,
+    borderRadius: 14,
     fontSize: 16,
-    color: colors.text,
+    color: liquidGlass.text.primary,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
   },
   addBtn: {
+    borderRadius: 50,
+    overflow: 'hidden',
+  },
+  addBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.primary,
     paddingVertical: 14,
-    borderRadius: borderRadius.full,
+    borderRadius: 50,
   },
   addBtnDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   addBtnText: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: colors.surface,
+    color: liquidGlass.text.inverse,
+  },
+  addBtnTextDisabled: {
+    color: liquidGlass.text.tertiary,
   },
 });

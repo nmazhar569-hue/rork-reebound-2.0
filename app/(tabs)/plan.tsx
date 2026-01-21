@@ -6,16 +6,15 @@ import {
   ScrollView, 
   TouchableOpacity,
 } from 'react-native';
-
 import { 
   ChevronRight,
   Dumbbell,
   Heart,
   Zap,
   User,
+  ChevronLeft,
 } from 'lucide-react-native';
-import { PageHeader, Card } from '@/components/ui';
-import colors, { borderRadius, layout, shadows } from '@/constants/colors';
+import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
 
 type WorkoutCategory = 'crossfit' | 'gym' | 'cardio' | 'bodyweight' | null;
@@ -39,28 +38,28 @@ const WORKOUT_CATEGORIES: CategoryOption[] = [
   {
     id: 'crossfit',
     label: 'CrossFit',
-    icon: <Zap size={28} color={colors.surface} />,
-    color: colors.accent,
+    icon: <Zap size={24} color="#FFF" />,
+    color: '#FF6B4A',
     description: 'High-intensity functional movements',
   },
   {
     id: 'gym',
     label: 'Gym',
-    icon: <Dumbbell size={28} color={colors.surface} />,
-    color: colors.primary,
+    icon: <Dumbbell size={24} color="#FFF" />,
+    color: liquidGlass.accent.primary,
     description: 'Traditional strength training',
   },
   {
     id: 'cardio',
     label: 'Cardio',
-    icon: <Heart size={28} color={colors.surface} />,
+    icon: <Heart size={24} color="#FFF" />,
     color: '#FF6B9D',
     description: 'Endurance and conditioning',
   },
   {
     id: 'bodyweight',
     label: 'Bodyweight',
-    icon: <User size={28} color={colors.surface} />,
+    icon: <User size={24} color="#FFF" />,
     color: '#9B7EFF',
     description: 'No equipment needed',
   },
@@ -76,6 +75,23 @@ const MUSCLE_GROUPS: MuscleGroupOption[] = [
   { id: 'glutes', label: 'Glutes', description: 'Glutes & hips' },
   { id: 'calves', label: 'Calves', description: 'Lower leg muscles' },
 ];
+
+function GlassCard({ children, style, onPress }: { children: React.ReactNode; style?: any; onPress?: () => void }) {
+  const content = (
+    <View style={[styles.glassCard, style]}>
+      {children}
+    </View>
+  );
+  
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
+}
 
 export default function PlanScreen() {
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>(null);
@@ -110,11 +126,10 @@ export default function PlanScreen() {
       
       <View style={styles.categoryGrid}>
         {WORKOUT_CATEGORIES.map((category) => (
-          <TouchableOpacity
+          <GlassCard
             key={category.id}
             style={styles.categoryCard}
             onPress={() => handleCategorySelect(category.id)}
-            activeOpacity={0.7}
           >
             <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
               {category.icon}
@@ -123,8 +138,8 @@ export default function PlanScreen() {
               <Text style={styles.categoryLabel}>{category.label}</Text>
               <Text style={styles.categoryDescription}>{category.description}</Text>
             </View>
-            <ChevronRight size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
+            <ChevronRight size={20} color={liquidGlass.text.tertiary} />
+          </GlassCard>
         ))}
       </View>
     </View>
@@ -140,15 +155,11 @@ export default function PlanScreen() {
           onPress={handleBack}
           activeOpacity={0.7}
         >
-          <ChevronRight 
-            size={20} 
-            color={colors.primary} 
-            style={{ transform: [{ rotate: '180deg' }] }}
-          />
+          <ChevronLeft size={20} color={liquidGlass.accent.primary} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
 
-        <View style={[styles.categoryBadge, { backgroundColor: category?.color + '15' }]}>
+        <View style={[styles.categoryBadge, { backgroundColor: category?.color + '20' }]}>
           <View style={[styles.categoryBadgeIcon, { backgroundColor: category?.color }]}>
             {category?.icon}
           </View>
@@ -162,18 +173,17 @@ export default function PlanScreen() {
 
         <View style={styles.muscleGroupList}>
           {MUSCLE_GROUPS.map((muscle) => (
-            <TouchableOpacity
+            <GlassCard
               key={muscle.id}
               style={styles.muscleGroupCard}
               onPress={() => handleMuscleGroupSelect(muscle.id)}
-              activeOpacity={0.7}
             >
               <View style={styles.muscleGroupContent}>
                 <Text style={styles.muscleGroupLabel}>{muscle.label}</Text>
                 <Text style={styles.muscleGroupDescription}>{muscle.description}</Text>
               </View>
-              <ChevronRight size={20} color={colors.textTertiary} />
-            </TouchableOpacity>
+              <ChevronRight size={20} color={liquidGlass.text.tertiary} />
+            </GlassCard>
           ))}
         </View>
       </View>
@@ -191,19 +201,15 @@ export default function PlanScreen() {
           onPress={handleBack}
           activeOpacity={0.7}
         >
-          <ChevronRight 
-            size={20} 
-            color={colors.primary} 
-            style={{ transform: [{ rotate: '180deg' }] }}
-          />
+          <ChevronLeft size={20} color={liquidGlass.accent.primary} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
 
         <View style={styles.breadcrumbs}>
-          <View style={[styles.breadcrumbBadge, { backgroundColor: category?.color + '15' }]}>
+          <View style={[styles.breadcrumbBadge, { backgroundColor: category?.color + '20' }]}>
             <Text style={[styles.breadcrumbText, { color: category?.color }]}>{category?.label}</Text>
           </View>
-          <ChevronRight size={14} color={colors.textTertiary} />
+          <ChevronRight size={14} color={liquidGlass.text.tertiary} />
           <View style={styles.breadcrumbBadge}>
             <Text style={styles.breadcrumbText}>{muscleGroup?.label}</Text>
           </View>
@@ -214,16 +220,16 @@ export default function PlanScreen() {
           {category?.label} exercises targeting {muscleGroup?.label.toLowerCase()}
         </Text>
 
-        <Card style={styles.placeholderCard}>
+        <GlassCard style={styles.placeholderCard}>
           <View style={styles.placeholderIcon}>
-            <Dumbbell size={48} color={colors.textTertiary} />
+            <Dumbbell size={48} color={liquidGlass.text.tertiary} />
           </View>
           <Text style={styles.placeholderTitle}>Workouts Coming Soon</Text>
           <Text style={styles.placeholderText}>
             Workout exercises for this muscle group will be added soon. 
             You can provide the workout data later.
           </Text>
-        </Card>
+        </GlassCard>
       </View>
     );
   };
@@ -235,10 +241,10 @@ export default function PlanScreen() {
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
-        <PageHeader 
-          title="Plan Your Workout" 
-          subtitle="Build your personalized training program" 
-        />
+        <View style={styles.header}>
+          <Text style={styles.title}>Plan Your Workout</Text>
+          <Text style={styles.subtitle}>Build your personalized training program</Text>
+        </View>
 
         {!selectedCategory && renderCategorySelection()}
         {selectedCategory && !selectedMuscleGroup && renderMuscleGroupSelection()}
@@ -253,48 +259,65 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: colors.background,
+    backgroundColor: liquidGlass.background.primary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: { 
-    padding: layout.screenPadding, 
-    paddingTop: layout.screenPaddingTop,
+    padding: glassLayout.screenPadding, 
+    paddingTop: glassLayout.screenPaddingTop,
+  },
+  header: {
+    marginBottom: 28,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
+    letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: liquidGlass.text.secondary,
+  },
+  glassCard: {
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    padding: 18,
+    ...glassShadows.soft,
   },
   categoriesContainer: {
     marginTop: 8,
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: '800' as const,
-    color: colors.text,
+    fontSize: 22,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
     marginBottom: 8,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   sectionSubtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginBottom: 28,
-    lineHeight: 24,
-    fontWeight: '500' as const,
+    fontSize: 15,
+    color: liquidGlass.text.secondary,
+    marginBottom: 24,
+    lineHeight: 22,
   },
   categoryGrid: {
-    gap: 16,
+    gap: 14,
   },
   categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xxl,
-    padding: 20,
     gap: 16,
-    ...shadows.medium,
   },
   categoryIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -302,16 +325,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoryLabel: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700' as const,
-    color: colors.text,
-    marginBottom: 4,
-    letterSpacing: -0.2,
+    color: liquidGlass.text.primary,
+    marginBottom: 3,
   },
   categoryDescription: {
     fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500' as const,
+    color: liquidGlass.text.tertiary,
   },
   muscleGroupsContainer: {
     marginTop: 8,
@@ -326,32 +347,32 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: colors.primary,
-    letterSpacing: -0.1,
+    color: liquidGlass.accent.primary,
   },
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     alignSelf: 'flex-start',
-    paddingRight: 20,
+    paddingRight: 18,
     paddingVertical: 8,
     paddingLeft: 8,
-    borderRadius: borderRadius.full,
+    borderRadius: 50,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
   },
   categoryBadgeIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   categoryBadgeText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700' as const,
-    color: colors.text,
-    letterSpacing: -0.2,
+    color: liquidGlass.text.primary,
   },
   muscleGroupList: {
     gap: 12,
@@ -359,26 +380,20 @@ const styles = StyleSheet.create({
   muscleGroupCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: 18,
     gap: 12,
-    ...shadows.soft,
   },
   muscleGroupContent: {
     flex: 1,
   },
   muscleGroupLabel: {
     fontSize: 17,
-    fontWeight: '700' as const,
-    color: colors.text,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.primary,
     marginBottom: 3,
-    letterSpacing: -0.2,
   },
   muscleGroupDescription: {
     fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500' as const,
+    color: liquidGlass.text.tertiary,
   },
   workoutListContainer: {
     marginTop: 8,
@@ -392,14 +407,15 @@ const styles = StyleSheet.create({
   breadcrumbBadge: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceDim,
+    borderRadius: 50,
+    backgroundColor: liquidGlass.surface.glass,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
   },
   breadcrumbText: {
     fontSize: 13,
     fontWeight: '600' as const,
-    color: colors.text,
-    letterSpacing: 0.1,
+    color: liquidGlass.text.primary,
   },
   placeholderCard: {
     alignItems: 'center',
@@ -410,7 +426,9 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colors.surfaceDim,
+    backgroundColor: liquidGlass.surface.glassDark,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -418,19 +436,17 @@ const styles = StyleSheet.create({
   placeholderTitle: {
     fontSize: 20,
     fontWeight: '700' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
     marginBottom: 10,
-    letterSpacing: -0.2,
   },
   placeholderText: {
     fontSize: 15,
-    color: colors.textSecondary,
+    color: liquidGlass.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
-    fontWeight: '500' as const,
     maxWidth: 300,
   },
   bottomSpacer: { 
-    height: layout.tabBarHeight,
+    height: glassLayout.tabBarHeight,
   },
 });

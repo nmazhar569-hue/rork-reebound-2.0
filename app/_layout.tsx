@@ -1,4 +1,3 @@
-// template
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -11,6 +10,7 @@ import { ReeProvider } from "@/contexts/ReeContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { HealthKitProvider } from "@/contexts/HealthKitContext";
 import { AppModeProvider } from "@/contexts/AppModeContext";
+import { liquidGlass } from "@/constants/liquidGlass";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,7 +18,15 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerBackTitle: "Back" }}>
+    <Stack 
+      screenOptions={{ 
+        headerBackTitle: "Back",
+        headerStyle: { backgroundColor: liquidGlass.background.primary },
+        headerTintColor: liquidGlass.text.primary,
+        headerTitleStyle: { color: liquidGlass.text.primary, fontWeight: '700' },
+        contentStyle: { backgroundColor: liquidGlass.background.primary },
+      }}
+    >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="auth" options={{ headerShown: false }} />
@@ -39,7 +47,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: liquidGlass.background.primary }}>
         <ThemeProvider>
           <AuthProvider>
             <HealthProvider>

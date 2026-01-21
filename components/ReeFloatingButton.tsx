@@ -12,16 +12,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { Lightbulb, HelpCircle, BarChart3, Dumbbell, Heart, TrendingUp, Apple, Home } from 'lucide-react-native';
-import { modeColors, glassRadius, glassShadows, neutralColors } from '@/constants/modeColors';
+import { liquidGlass, glassShadows } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
 import { useRee } from '@/contexts/ReeContext';
 import { useAppMode } from '@/contexts/AppModeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BUTTON_SIZE = 56;
-const DOUBLE_TAP_DELAY = 300; // ms between taps for double tap
+const DOUBLE_TAP_DELAY = 300;
 
 interface NavigationOption {
   id: string;
@@ -41,7 +40,7 @@ interface AIOption {
 export function ReeFloatingButton() {
   const router = useRouter();
   const { currentInsight, hasUnseenInsight } = useRee();
-  const { setCurrentMode, theme } = useAppMode();
+  const { setCurrentMode } = useAppMode();
   
   const [showAIMenu, setShowAIMenu] = useState(false);
   const [showNavMenu, setShowNavMenu] = useState(false);
@@ -75,7 +74,6 @@ export function ReeFloatingButton() {
         isDragging.current = false;
         isHolding.current = true;
         
-        // Press animation
         Animated.spring(scaleAnim, {
           toValue: 0.9,
           tension: 300,
@@ -91,7 +89,6 @@ export function ReeFloatingButton() {
         if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
           isDragging.current = true;
           
-          // Smooth position update while dragging
           const newX = Math.max(10, Math.min(SCREEN_WIDTH - BUTTON_SIZE - 10, gestureState.moveX - BUTTON_SIZE / 2));
           const newY = Math.max(50, Math.min(SCREEN_HEIGHT - BUTTON_SIZE - 90, gestureState.moveY - BUTTON_SIZE / 2));
           
@@ -110,13 +107,11 @@ export function ReeFloatingButton() {
           useNativeDriver: true,
         }).start();
         
-        // Handle tap detection
         if (!isDragging.current && !showNavMenu && !showAIMenu) {
           const now = Date.now();
           const timeSinceLastTap = now - lastTapTime.current;
           
           if (timeSinceLastTap < DOUBLE_TAP_DELAY && tapCount.current === 1) {
-            // Double tap detected - show nav menu
             if (tapTimer.current) {
               clearTimeout(tapTimer.current);
               tapTimer.current = null;
@@ -125,13 +120,11 @@ export function ReeFloatingButton() {
             haptics.medium();
             openNavMenu();
           } else {
-            // First tap - wait to see if it's a double tap
             tapCount.current = 1;
             lastTapTime.current = now;
             
             tapTimer.current = setTimeout(() => {
               if (tapCount.current === 1) {
-                // Single tap - show AI menu
                 haptics.light();
                 openAIMenu();
               }
@@ -140,17 +133,14 @@ export function ReeFloatingButton() {
           }
         }
         
-        // Snap to nearest edge after dragging
         if (isDragging.current) {
           const currentX = (positionX as any)._value;
           const currentY = (positionY as any)._value;
           
-          // Constrain Y position
           const maxY = SCREEN_HEIGHT - BUTTON_SIZE - 100;
           const minY = 60;
           const constrainedY = Math.max(minY, Math.min(maxY, currentY));
           
-          // Snap to nearest edge (left or right)
           const snapToLeft = currentX < SCREEN_WIDTH / 2;
           const targetX = snapToLeft ? 20 : SCREEN_WIDTH - BUTTON_SIZE - 20;
           
@@ -260,7 +250,6 @@ export function ReeFloatingButton() {
 
   return (
     <>
-      {/* Overlay for closing menus */}
       {(showAIMenu || showNavMenu) && (
         <Pressable 
           style={styles.overlay} 
@@ -271,7 +260,6 @@ export function ReeFloatingButton() {
         />
       )}
       
-      {/* AI Quick Menu (Tap) */}
       {showAIMenu && (
         <Animated.View 
           style={[
@@ -295,7 +283,7 @@ export function ReeFloatingButton() {
             }
           ]}
         >
-          {aiOptions.map((option, index) => (
+          {aiOptions.map((option) => (
             <Animated.View
               key={option.id}
               style={[
@@ -313,23 +301,18 @@ export function ReeFloatingButton() {
               ]}
             >
               <TouchableOpacity
-                style={[styles.aiOptionButton]}
+                style={styles.aiOptionButton}
                 onPress={option.action}
                 activeOpacity={0.7}
               >
-                <BlurView intensity={80} style={styles.blurContainer} tint="light">
-                  <option.icon size={18} color={theme.primary} strokeWidth={2} />
-                  <Text style={[styles.aiOptionLabel, { color: neutralColors.text }]}>
-                    {option.label}
-                  </Text>
-                </BlurView>
+                <option.icon size={18} color={liquidGlass.accent.primary} strokeWidth={2} />
+                <Text style={styles.aiOptionLabel}>{option.label}</Text>
               </TouchableOpacity>
             </Animated.View>
           ))}
         </Animated.View>
       )}
 
-      {/* Navigation Menu (Hold) */}
       {showNavMenu && (
         <Animated.View 
           style={[
@@ -347,38 +330,27 @@ export function ReeFloatingButton() {
             }
           ]}
         >
-          <BlurView intensity={90} style={styles.navMenuBlur} tint="light">
+          <View style={styles.navMenuContent}>
             <View style={styles.navMenuHeader}>
               <Text style={styles.navMenuTitle}>Navigate to</Text>
             </View>
-            {navigationOptions.map((option) => {
-              const optionTheme = modeColors[option.mode];
-              return (
-                <TouchableOpacity
-                  key={option.id}
-                  style={styles.navOptionButton}
-                  onPress={() => handleNavigationOption(option)}
-                  activeOpacity={0.7}
-                >
-                  <LinearGradient
-                    colors={optionTheme.gradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.navOptionGradient}
-                  >
-                    <option.icon size={20} color="#FFF" strokeWidth={2.5} />
-                  </LinearGradient>
-                  <Text style={[styles.navOptionLabel, { color: neutralColors.text }]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </BlurView>
+            {navigationOptions.map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={styles.navOptionButton}
+                onPress={() => handleNavigationOption(option)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.navOptionIcon}>
+                  <option.icon size={20} color={liquidGlass.accent.primary} strokeWidth={2} />
+                </View>
+                <Text style={styles.navOptionLabel}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </Animated.View>
       )}
       
-      {/* Floating Button */}
       <Animated.View
         style={[
           styles.floatingButton,
@@ -391,20 +363,18 @@ export function ReeFloatingButton() {
         {...panResponder.panHandlers}
       >
         <LinearGradient
-          colors={theme.gradient}
+          colors={liquidGlass.gradients.primary}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
         >
-          <BlurView intensity={40} style={styles.buttonBlur} tint="light">
-            <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>R</Text>
-            </View>
-          </BlurView>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logoText}>R</Text>
+          </View>
         </LinearGradient>
         
         {hasUnseenInsight && !showAIMenu && !showNavMenu && (
-          <View style={[styles.badge, { backgroundColor: modeColors.recovery.primary }]} />
+          <View style={styles.badge} />
         )}
       </Animated.View>
     </>
@@ -415,40 +385,37 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 98,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   floatingButton: {
     position: 'absolute',
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
-    borderRadius: glassRadius.full,
+    borderRadius: BUTTON_SIZE / 2,
     zIndex: 100,
-    ...glassShadows.heavy,
+    ...glassShadows.glowStrong,
   },
   buttonGradient: {
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
-    borderRadius: glassRadius.full,
-    overflow: 'hidden',
-  },
-  buttonBlur: {
-    flex: 1,
+    borderRadius: BUTTON_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: 0.6,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   logoContainer: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: liquidGlass.text.inverse,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoText: {
     fontSize: 18,
-    fontWeight: '800',
-    color: modeColors.workout.primary,
+    fontWeight: '800' as const,
+    color: liquidGlass.accent.primary,
   },
   badge: {
     position: 'absolute',
@@ -457,11 +424,11 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+    backgroundColor: '#FF6B9D',
     borderWidth: 2,
     borderColor: '#FFF',
   },
   
-  // AI Menu (quick actions)
   aiMenuContainer: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 120 : 100,
@@ -470,43 +437,42 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   aiOptionButton: {
-    borderRadius: glassRadius.button,
-    overflow: 'hidden',
-    ...glassShadows.medium,
-  },
-  blurContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 10,
+    borderRadius: 16,
+    backgroundColor: liquidGlass.surface.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: liquidGlass.border.glass,
     minWidth: 150,
+    ...glassShadows.medium,
   },
   aiOptionLabel: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     letterSpacing: 0.2,
+    color: liquidGlass.text.primary,
   },
   
-  // Navigation Menu (hold)
   navMenuContainer: {
     position: 'absolute',
     top: '50%',
     left: '50%',
     marginLeft: -140,
-    marginTop: -160,
+    marginTop: -180,
     width: 280,
     zIndex: 99,
-    borderRadius: glassRadius.large,
+    borderRadius: 24,
     overflow: 'hidden',
-    ...glassShadows.heavy,
+    ...glassShadows.medium,
   },
-  navMenuBlur: {
-    borderRadius: glassRadius.large,
+  navMenuContent: {
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: liquidGlass.border.glass,
     overflow: 'hidden',
   },
   navMenuHeader: {
@@ -514,12 +480,12 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+    borderBottomColor: liquidGlass.border.subtle,
   },
   navMenuTitle: {
     fontSize: 17,
-    fontWeight: '700',
-    color: neutralColors.text,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
     letterSpacing: -0.2,
   },
   navOptionButton: {
@@ -529,18 +495,22 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.04)',
+    borderBottomColor: liquidGlass.border.subtle,
   },
-  navOptionGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  navOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: liquidGlass.accent.muted,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navOptionLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600' as const,
     letterSpacing: 0.1,
+    color: liquidGlass.text.primary,
   },
 });
