@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Check, ChevronRight, Plus, RotateCcw, ChevronLeft, ArrowDown, ArrowUp, ArrowLeftRight, Info, Trash2, RefreshCw, Moon, Droplets, Dumbbell, Footprints, Swords, ChevronDown, ChevronUp, Search, Filter, BicepsFlexed, HeartPulse } from 'lucide-react-native';
+import { Check, ChevronRight, Plus, RotateCcw, ChevronLeft, ArrowDown, ArrowUp, ArrowLeftRight, Info, Trash2, RefreshCw, Moon, Droplets, Dumbbell, Footprints, Swords, ChevronDown, ChevronUp, Search, BicepsFlexed, HeartPulse } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
@@ -16,6 +16,7 @@ import colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Program, ProgramSession, ProgramWeekDay, SportType, WeekdayKey, Exercise, AlternativeType } from '@/types';
 import { MASTER_EXERCISE_DATABASE } from '@/constants/exerciseDatabase';
+import { EXERCISE_LIBRARY, ExerciseEntry, ExerciseCategory } from '@/constants/database_seed';
 import { buildSessionFromType, getAllSessionTypeOptions } from '@/constants/workoutTemplates';
 import { reorderByIndex } from '@/utils/programUtils';
 import { getExerciseAlternatives } from '@/constants/exerciseAlternatives';
@@ -841,50 +842,58 @@ export default function ProgramBuilderScreen() {
     onSelect: (exercise: Exercise) => void;
   }) {
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeCategory, setActiveCategory] = useState<'all' | 'upper' | 'lower' | 'maintenance' | 'cardio' | 'martial_arts'>('all');
+    const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | null>(null);
+    const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
     
     React.useEffect(() => {
         if (props.visible) {
             setSearchQuery('');
-            setActiveCategory('all');
+            setSelectedCategory(null);
+            setSelectedMuscleGroup(null);
         }
     }, [props.visible]);
 
-    const getCategory = useCallback((ex: Exercise): string => {
-        const name = ex.name.toLowerCase();
-        const pattern = ex.movementPattern || '';
-        const sport = ex.sportRelevance;
+    const convertToExercise = useCallback((entry: ExerciseEntry): Exercise => {
+      return {
+        id: entry.id,
+        name: entry.name,
+        sets: 3,
+        reps: entry.difficulty === 'Beginner' ? '10-12' : entry.difficulty === 'Intermediate' ? '8-10' : '6-8',
+        rest: entry.difficulty === 'Advanced' ? 120 : 90,
+        kneeSafeLevel: 'safe',
+        notes: `${entry.muscleGroup} exercise. Equipment: ${entry.equipment.length > 0 ? entry.equipment.join(', ') : 'None'}`,
+      };
+    }, []);
 
-        if (activeCategory === 'martial_arts' && sport?.martial_arts) return 'martial_arts';
-        
-        if (pattern.includes('squat') || pattern.includes('lunge') || pattern.includes('hinge') || name.includes('leg') || name.includes('squat') || name.includes('deadlift')) return 'lower';
-        if (pattern.includes('push') || pattern.includes('pull') || pattern.includes('press') || name.includes('press') || name.includes('pull') || name.includes('row') || name.includes('curl')) return 'upper';
-        if (pattern.includes('mobility') || pattern.includes('core') || name.includes('plank') || name.includes('stretch') || name.includes('yoga')) return 'maintenance';
-        if (pattern.includes('cardio') || name.includes('run') || name.includes('bike') || name.includes('jump')) return 'cardio';
-        if (sport?.martial_arts) return 'martial_arts';
+    const filteredByCategory = useMemo(() => {
+      if (!selectedCategory) return [];
+      return EXERCISE_LIBRARY.filter(ex => ex.category === selectedCategory);
+    }, [selectedCategory]);
 
-        return 'other';
-    }, [activeCategory]);
+    const uniqueMuscleGroups = useMemo(() => {
+      if (!selectedCategory) return [];
+      const groups = [...new Set(filteredByCategory.map(ex => ex.muscleGroup))];
+      return groups.sort();
+    }, [filteredByCategory, selectedCategory]);
 
-    const filteredCandidates = useMemo(() => {
-      let result = props.candidates;
-
-      if (activeCategory !== 'all') {
-        result = result.filter(ex => {
-            const cat = getCategory(ex);
-            if (activeCategory === 'upper') return cat === 'upper';
-            if (activeCategory === 'lower') return cat === 'lower';
-            if (activeCategory === 'maintenance') return cat === 'maintenance' || cat === 'other';
-            if (activeCategory === 'cardio') return cat === 'cardio';
-            if (activeCategory === 'martial_arts') return ex.sportRelevance?.martial_arts;
-            return true;
-        });
+    const exercisesInMuscleGroup = useMemo(() => {
+      if (!selectedMuscleGroup) return [];
+      let result = filteredByCategory.filter(ex => ex.muscleGroup === selectedMuscleGroup);
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        result = result.filter(ex => ex.name.toLowerCase().includes(query));
       }
+      return result;
+    }, [filteredByCategory, selectedMuscleGroup, searchQuery]);
 
-      if (!searchQuery.trim()) return result;
+    const searchAllExercises = useMemo(() => {
+      if (!searchQuery.trim()) return [];
       const query = searchQuery.toLowerCase();
-      return result.filter(ex => ex.name.toLowerCase().includes(query));
-    }, [props.candidates, searchQuery, activeCategory, getCategory]);
+      return EXERCISE_LIBRARY.filter(ex => 
+        ex.name.toLowerCase().includes(query) ||
+        ex.muscleGroup.toLowerCase().includes(query)
+      ).slice(0, 20);
+    }, [searchQuery]);
 
     const hasAlternatives = props.alternatives.all.length > 0;
     const isSwapMode = props.mode === 'swap' && hasAlternatives;
@@ -929,67 +938,166 @@ export default function ProgramBuilderScreen() {
       );
     };
 
-    const categories: { key: typeof activeCategory; label: string; icon: React.ReactNode }[] = [
-        { key: 'all', label: 'All', icon: <Filter size={14} color={activeCategory === 'all' ? colors.surface : colors.text} /> },
-        { key: 'upper', label: 'Upper', icon: <Dumbbell size={14} color={activeCategory === 'upper' ? colors.surface : colors.text} /> },
-        { key: 'lower', label: 'Lower', icon: <BicepsFlexed size={14} color={activeCategory === 'lower' ? colors.surface : colors.text} /> },
-        { key: 'maintenance', label: 'Maintenance', icon: <HeartPulse size={14} color={activeCategory === 'maintenance' ? colors.surface : colors.text} /> },
-        { key: 'cardio', label: 'Cardio', icon: <Footprints size={14} color={activeCategory === 'cardio' ? colors.surface : colors.text} /> },
-        { key: 'martial_arts', label: 'Martial Arts', icon: <Swords size={14} color={activeCategory === 'martial_arts' ? colors.surface : colors.text} /> },
+    const categoryOptions: { key: ExerciseCategory; label: string; icon: React.ReactNode; color: string }[] = [
+        { key: 'GYM', label: 'Gym', icon: <Dumbbell size={24} color={colors.surface} />, color: '#3B82F6' },
+        { key: 'BODYWEIGHT', label: 'Bodyweight', icon: <BicepsFlexed size={24} color={colors.surface} />, color: '#10B981' },
+        { key: 'CARDIO', label: 'Cardio', icon: <HeartPulse size={24} color={colors.surface} />, color: '#F59E0B' },
+        { key: 'CROSSFIT', label: 'CrossFit', icon: <Swords size={24} color={colors.surface} />, color: '#EF4444' },
     ];
+
+    const handleBack = () => {
+      if (selectedMuscleGroup) {
+        setSelectedMuscleGroup(null);
+        setSearchQuery('');
+      } else if (selectedCategory) {
+        setSelectedCategory(null);
+      }
+    };
+
+    const renderCategorySelection = () => (
+      <View style={styles.categoryGrid}>
+        {categoryOptions.map((cat) => (
+          <TouchableOpacity
+            key={cat.key}
+            style={[styles.categoryCard, { backgroundColor: cat.color }]}
+            onPress={() => {
+              haptics.selection();
+              setSelectedCategory(cat.key);
+            }}
+            testID={`category-${cat.key}`}
+          >
+            {cat.icon}
+            <Text style={styles.categoryCardText}>{cat.label}</Text>
+            <Text style={styles.categoryCardCount}>
+              {EXERCISE_LIBRARY.filter(e => e.category === cat.key).length} exercises
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+
+    const renderMuscleGroupSelection = () => (
+      <View style={styles.muscleGroupList}>
+        {uniqueMuscleGroups.map((group) => {
+          const count = filteredByCategory.filter(e => e.muscleGroup === group).length;
+          return (
+            <TouchableOpacity
+              key={group}
+              style={styles.muscleGroupRow}
+              onPress={() => {
+                haptics.selection();
+                setSelectedMuscleGroup(group);
+              }}
+              testID={`muscleGroup-${group}`}
+            >
+              <View style={styles.muscleGroupInfo}>
+                <Text style={styles.muscleGroupName}>{group}</Text>
+                <Text style={styles.muscleGroupCount}>{count} exercise{count !== 1 ? 's' : ''}</Text>
+              </View>
+              <ChevronRight size={20} color={colors.textTertiary} />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+
+    const renderExerciseList = (exercises: ExerciseEntry[]) => (
+      <View style={styles.candidatesList}>
+        {exercises.map((ex) => {
+          const difficultyColor = ex.difficulty === 'Beginner' ? colors.success : ex.difficulty === 'Intermediate' ? colors.warning : colors.danger;
+          return (
+            <TouchableOpacity 
+              key={ex.id} 
+              style={styles.exerciseListRow} 
+              onPress={() => {
+                haptics.light();
+                props.onSelect(convertToExercise(ex));
+              }} 
+              testID={`exercisePick-${ex.id}`}
+            >
+              <View style={styles.exerciseListMain}>
+                <Text style={styles.exerciseListName}>{ex.name}</Text>
+                <Text style={styles.exerciseListMeta}>
+                  {ex.equipment.length > 0 ? ex.equipment.slice(0, 2).join(', ') : 'No equipment'}
+                </Text>
+              </View>
+              <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor + '15' }]}>
+                <Text style={[styles.difficultyText, { color: difficultyColor }]}>{ex.difficulty}</Text>
+              </View>
+              <Plus size={20} color={colors.primary} />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+
+    const getTitle = () => {
+      if (isSwapMode) return 'Swap exercise';
+      if (selectedMuscleGroup) return selectedMuscleGroup;
+      if (selectedCategory) return categoryOptions.find(c => c.key === selectedCategory)?.label || 'Select Muscle Group';
+      return 'Choose Category';
+    };
+
+    const getSubtitle = () => {
+      if (isSwapMode) return undefined;
+      if (selectedMuscleGroup) return `${exercisesInMuscleGroup.length} exercises available`;
+      if (selectedCategory) return `${uniqueMuscleGroups.length} muscle groups`;
+      return 'Select a category to browse exercises';
+    };
 
     return (
       <Modal transparent visible={props.visible} animationType="slide" onRequestClose={props.onClose}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { height: '85%', paddingBottom: 0 }]}>
-            <View style={{ paddingHorizontal: 0, paddingBottom: 16 }}>
-                 <Text style={styles.modalTitle}>{isSwapMode ? 'Swap exercise' : 'Choose exercise'}</Text>
-                 {!isSwapMode && <Text style={styles.modalSubtitle}>Select from database or create your own.</Text>}
+            <View style={styles.exercisePickerHeader}>
+              {(selectedCategory || selectedMuscleGroup) && !isSwapMode && (
+                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                  <ChevronLeft size={24} color={colors.text} />
+                </TouchableOpacity>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>{getTitle()}</Text>
+                {getSubtitle() && <Text style={styles.modalSubtitle}>{getSubtitle()}</Text>}
+              </View>
             </View>
 
             {isSwapMode && props.baseExercise ? (
               <View style={styles.swapContext}>
                 <Text style={styles.swapContextLabel}>Currently:</Text>
                 <Text style={styles.swapContextName}>{props.baseExercise.name}</Text>
-                <Text style={styles.modalSubtitle}>Here are alternatives that work similar muscles. Choose what feels right for you.</Text>
+                <Text style={styles.modalSubtitle}>Here are alternatives that work similar muscles.</Text>
               </View>
-            ) : (
-                <View>
-                     <View style={styles.searchContainer}>
-                        <Search size={18} color={colors.textTertiary} style={styles.searchIcon} />
-                        <TextInput
-                            style={styles.searchInputStyled}
-                            placeholder="Search exercises..."
-                            placeholderTextColor={colors.textTertiary}
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                     </View>
-
-                    {props.onRequestCreate && (
-                        <TouchableOpacity 
-                            style={styles.addCustomBtn}
-                            onPress={props.onRequestCreate}
-                        >
-                            <Plus size={16} color={colors.primary} />
-                            <Text style={styles.addCustomBtnText}>Add my own workout</Text>
-                        </TouchableOpacity>
-                    )}
-
-                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
-                        {categories.map((cat) => (
-                            <TouchableOpacity
-                                key={cat.key}
-                                style={[styles.categoryChip, activeCategory === cat.key && styles.categoryChipActive]}
-                                onPress={() => setActiveCategory(cat.key)}
-                            >
-                                {cat.icon}
-                                <Text style={[styles.categoryChipText, activeCategory === cat.key && styles.categoryChipTextActive]}>{cat.label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                     </ScrollView>
+            ) : !selectedCategory ? (
+              <View>
+                <View style={styles.searchContainer}>
+                  <Search size={18} color={colors.textTertiary} style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInputStyled}
+                    placeholder="Search all exercises..."
+                    placeholderTextColor={colors.textTertiary}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
                 </View>
-            )}
+                {props.onRequestCreate && (
+                  <TouchableOpacity style={styles.addCustomBtn} onPress={props.onRequestCreate}>
+                    <Plus size={16} color={colors.primary} />
+                    <Text style={styles.addCustomBtnText}>Add my own workout</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : selectedMuscleGroup ? (
+              <View style={styles.searchContainer}>
+                <Search size={18} color={colors.textTertiary} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInputStyled}
+                  placeholder={`Search ${selectedMuscleGroup}...`}
+                  placeholderTextColor={colors.textTertiary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+              </View>
+            ) : null}
 
             <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               {isSwapMode && (
@@ -1012,44 +1120,34 @@ export default function ProgramBuilderScreen() {
                     <ArrowUp size={14} color={colors.accent} />,
                     colors.accentMuted
                   )}
-                  
-                  {filteredCandidates.length > 0 && (
-                    <View style={styles.otherOptionsSection}>
-                      <Text style={styles.otherOptionsTitle}>Other options</Text>
-                      <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search exercises..."
-                        placeholderTextColor={colors.textTertiary}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                      />
+                </>
+              )}
+
+              {!isSwapMode && !selectedCategory && searchQuery.trim() && (
+                <>
+                  <Text style={styles.searchResultsTitle}>Search Results</Text>
+                  {searchAllExercises.length > 0 ? (
+                    renderExerciseList(searchAllExercises)
+                  ) : (
+                    <View style={{ padding: 20, alignItems: 'center' }}>
+                      <Text style={{ color: colors.textSecondary }}>No exercises found for &quot;{searchQuery}&quot;</Text>
                     </View>
                   )}
                 </>
               )}
 
-              {(!isSwapMode || filteredCandidates.length > 0) && (
-                <View style={styles.candidatesList}>
-                  {filteredCandidates.map((ex) => {
-                    const levelColor = ex.kneeSafeLevel === 'safe' ? colors.success : ex.kneeSafeLevel === 'modified' ? colors.warning : colors.danger;
-                    const levelText = ex.kneeSafeLevel === 'safe' ? 'Knee-Safe' : ex.kneeSafeLevel === 'modified' ? 'Modified' : 'Caution';
-                    return (
-                      <TouchableOpacity key={ex.id} style={styles.modalRow} onPress={() => props.onSelect(ex)} testID={`exercisePick-${ex.id}`}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.modalRowTitle}>{ex.name}</Text>
-                          <Text style={styles.modalRowMeta}>{ex.sets} × {ex.reps} · {ex.rest}s</Text>
-                        </View>
-                        <View style={[styles.levelDot, { backgroundColor: levelColor }]} />
-                        <Text style={[styles.levelText, { color: levelColor }]}>{levelText}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-              {filteredCandidates.length === 0 && (
+              {!isSwapMode && !selectedCategory && !searchQuery.trim() && renderCategorySelection()}
+
+              {!isSwapMode && selectedCategory && !selectedMuscleGroup && renderMuscleGroupSelection()}
+
+              {!isSwapMode && selectedMuscleGroup && (
+                exercisesInMuscleGroup.length > 0 ? (
+                  renderExerciseList(exercisesInMuscleGroup)
+                ) : (
                   <View style={{ padding: 20, alignItems: 'center' }}>
-                      <Text style={{ color: colors.textSecondary }}>No exercises found.</Text>
+                    <Text style={{ color: colors.textSecondary }}>No exercises found.</Text>
                   </View>
+                )
               )}
               <View style={{ height: 40 }} />
             </ScrollView>
@@ -2075,6 +2173,113 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   candidatesList: {
+    marginTop: 8,
+  },
+  exercisePickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingBottom: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 8,
+  },
+  categoryCard: {
+    width: '47%',
+    padding: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  categoryCardText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: colors.surface,
+  },
+  categoryCardCount: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  muscleGroupList: {
+    marginTop: 8,
+  },
+  muscleGroupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  muscleGroupInfo: {
+    flex: 1,
+  },
+  muscleGroupName: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  muscleGroupCount: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  exerciseListRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: 12,
+  },
+  exerciseListMain: {
+    flex: 1,
+  },
+  exerciseListName: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  exerciseListMeta: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  difficultyText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+  },
+  searchResultsTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.textSecondary,
+    marginBottom: 12,
     marginTop: 8,
   },
   editGrid: {
