@@ -467,8 +467,42 @@ export default function OnboardingScreen() {
     }
   };
 
+  const handleSkipOnboarding = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    const defaultProfile: UserProfile = {
+      injuryType: 'general_pain',
+      painTolerance: 'medium',
+      trainingStyle: 'general',
+      sportType: 'gym',
+      weeklyFrequency: 3,
+      onboardingCompleted: true,
+      questionnaireProfile: {
+        completedAt: new Date().toISOString(),
+        primaryGoals: [],
+        dietaryConstraints: [],
+        frictionPoints: [],
+        motivationDrivers: [],
+      },
+      aiPreferences: {
+        explanationDepth: 'simple',
+      },
+    };
+
+    await completeOnboarding(defaultProfile);
+    router.replace('/(tabs)');
+  };
+
   const renderWelcome = () => (
     <Animated.View style={styles.welcomeContainer}>
+      <TouchableOpacity 
+        style={styles.skipOnboardingButton}
+        onPress={handleSkipOnboarding}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.skipOnboardingText}>Skip</Text>
+      </TouchableOpacity>
+      
       <View style={styles.welcomeContent}>
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
@@ -869,6 +903,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: 'space-between',
+  },
+  skipOnboardingButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  skipOnboardingText: {
+    fontSize: 15,
+    color: colors.textTertiary,
+    fontWeight: '500' as const,
   },
   welcomeContent: {
     flex: 1,
