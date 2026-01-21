@@ -12,6 +12,29 @@ export type InjuryType =
   | 'general_pain' 
   | 'post_surgery';
 
+export type KneeInjuryType = 
+  | 'ACL_REHAB' 
+  | 'PATELLAR_TENDONITIS' 
+  | 'MENISCUS_TEAR' 
+  | 'RUNNERS_KNEE' 
+  | 'GENERAL_PAIN' 
+  | 'POST_SURGERY';
+
+export type ImpactLevel = 'NONE' | 'LOW' | 'HIGH';
+
+export type RecoveryCategory = 'REHAB' | 'WARMUP' | 'COOLDOWN' | 'MOBILITY';
+
+export type WorkoutSessionType = 'STRENGTH' | 'RECOVERY' | 'PHYSIO' | 'CARDIO';
+
+export interface InjuryProfile {
+  type: KneeInjuryType;
+  painLevel: number; // 1-10
+  contraindications: string[]; // e.g. ['impact', 'deep_flexion', 'lateral_movement']
+  active: boolean;
+  notes?: string;
+  diagnosedDate?: string;
+}
+
 export type PainTolerance = 'low' | 'medium' | 'high';
 
 export type TrainingStyle = 'gym' | 'sport' | 'general';
@@ -271,6 +294,24 @@ export interface WorkoutSession {
   sleepHoursPrior?: number;
   stressLevel?: 'Low' | 'Medium' | 'High';
   completedAt?: string;
+  sessionType?: WorkoutSessionType;
+}
+
+export interface RecoveryExercise {
+  id: string;
+  name: string;
+  category: RecoveryCategory;
+  muscleGroup: MuscleGroup | 'full_body' | 'lower_body' | 'upper_body';
+  duration: number; // seconds
+  sets?: number;
+  reps?: string;
+  impactLevel: ImpactLevel;
+  tags: string[]; // e.g. ['safe_for_acl', 'vmo_focus', 'isometric']
+  instructions: string;
+  contraindications: string[]; // conditions that make this exercise unsuitable
+  equipmentNeeded: EquipmentType[];
+  videoUrl?: string;
+  alternatives?: string[]; // IDs of alternative exercises
 }
 
 export interface Exercise {
