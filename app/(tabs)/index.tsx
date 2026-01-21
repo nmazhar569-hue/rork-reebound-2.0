@@ -17,6 +17,8 @@ import { useApp } from '@/contexts/AppContext';
 import { useRee } from '@/contexts/ReeContext';
 import { LoadingState, Card } from '@/components/ui';
 import { WelcomeBackCard } from '@/components/WelcomeBackCard';
+import { SpatialGlassCard } from '@/components/SpatialGlassCard';
+import spatialGlass from '@/constants/spatialGlass';
 import colors, { borderRadius, shadows, layout, gradients } from '@/constants/colors';
 import { haptics } from '@/utils/haptics';
 import { recoveryRoutines } from '@/constants/workoutTemplates';
@@ -148,8 +150,12 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+    <LinearGradient
+      colors={spatialGlass.backgrounds.light.vibrant}
+      style={styles.container}
+    >
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
         <Text style={styles.title}>Home Screen</Text>
         <TouchableOpacity style={styles.notificationBtn} onPress={() => haptics.light()}>
           <Bell size={22} color={colors.text} />
@@ -165,7 +171,7 @@ export default function HomeScreen() {
       )}
 
       {!todayReadiness && !showWelcomeBack && (
-        <Card style={styles.readinessCard}>
+        <SpatialGlassCard style={styles.readinessCard} layer="control">
           <View style={styles.readinessHeader}>
             <Text style={styles.readinessTitle}>Daily Check-In</Text>
             <TouchableOpacity onPress={() => handleReadinessSubmit('medium')}>
@@ -215,7 +221,7 @@ export default function HomeScreen() {
               </View>
             </View>
           )}
-        </Card>
+        </SpatialGlassCard>
       )}
 
       <View style={styles.focusCardContainer}>
@@ -243,7 +249,7 @@ export default function HomeScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recent activities</Text>
-        <Card style={styles.activitiesCard}>
+        <SpatialGlassCard style={styles.activitiesCard} layer="control">
           {recentActivities.map((activity, index) => {
             const Icon = activity.icon;
             return (
@@ -273,38 +279,41 @@ export default function HomeScreen() {
               </TouchableOpacity>
             );
           })}
-        </Card>
+        </SpatialGlassCard>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Suggested Recovery Exercises</Text>
         <View style={styles.recoveryList}>
           {suggestedRecoveryExercises.map((routine) => (
-            <TouchableOpacity 
+            <SpatialGlassCard 
               key={routine.id}
-              style={styles.recoveryItem}
+              layer="control"
+              interactive
               onPress={() => {
                 haptics.light();
                 routerInstance.push('/(tabs)/recovery');
               }}
             >
-              <View style={styles.recoveryIconWrap}>
-                <Activity size={18} color={colors.primary} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }}>
+                <View style={styles.recoveryIconWrap}>
+                  <Activity size={18} color={colors.primary} />
+                </View>
+                <View style={styles.recoveryContent}>
+                  <Text style={styles.recoveryTitle}>{routine.title}</Text>
+                  <Text style={styles.recoveryMeta}>{routine.steps.length} steps · {routine.duration} min</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.recoveryPlayBtn}
+                  onPress={() => {
+                    haptics.medium();
+                    routerInstance.push('/(tabs)/recovery');
+                  }}
+                >
+                  <Play size={14} color={colors.surface} fill={colors.surface} />
+                </TouchableOpacity>
               </View>
-              <View style={styles.recoveryContent}>
-                <Text style={styles.recoveryTitle}>{routine.title}</Text>
-                <Text style={styles.recoveryMeta}>{routine.steps.length} steps · {routine.duration} min</Text>
-              </View>
-              <TouchableOpacity 
-                style={styles.recoveryPlayBtn}
-                onPress={() => {
-                  haptics.medium();
-                  routerInstance.push('/(tabs)/recovery');
-                }}
-              >
-                <Play size={14} color={colors.surface} fill={colors.surface} />
-              </TouchableOpacity>
-            </TouchableOpacity>
+            </SpatialGlassCard>
           ))}
         </View>
       </View>
@@ -313,17 +322,17 @@ export default function HomeScreen() {
         <View style={styles.wellnessHeader}>
           <Text style={styles.sectionTitle}>Wellness Tips</Text>
         </View>
-        <Card style={styles.wellnessCard}>
+        <SpatialGlassCard style={styles.wellnessCard} layer="control">
           <Text style={styles.wellnessText}>
             Hooting the air that are always your effortgirlanies will rise you and should leap into yoga properties.
           </Text>
-        </Card>
+        </SpatialGlassCard>
       </View>
 
       {todayWorkout && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Today&apos;s Workout</Text>
-          <Card style={styles.workoutCard}>
+          <SpatialGlassCard style={styles.workoutCard} layer="control">
             <Text style={styles.workoutTitle}>{todayWorkout.title}</Text>
             <Text style={styles.workoutMeta}>{todayWorkout.exercises.length} exercises</Text>
             <TouchableOpacity 
@@ -333,30 +342,31 @@ export default function HomeScreen() {
               <Play size={16} color={colors.surface} fill={colors.surface} />
               <Text style={styles.startWorkoutText}>Start Workout</Text>
             </TouchableOpacity>
-          </Card>
+          </SpatialGlassCard>
         </View>
       )}
 
       <View style={styles.quickActions}>
-        <TouchableOpacity 
+        <SpatialGlassCard 
           style={styles.quickActionCard} 
           onPress={() => routerInstance.push('/programs' as any)} 
-          testID="homeBuildProgram"
+          interactive
+          layer="control"
         >
           <Text style={styles.quickActionTitle}>Build My Program</Text>
           <Text style={styles.quickActionDescription}>Shape your training, your way</Text>
-        </TouchableOpacity>
+        </SpatialGlassCard>
       </View>
 
       <View style={styles.bottomSpacer} />
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: colors.background,
   },
   scrollContent: { 
     padding: layout.screenPadding, 

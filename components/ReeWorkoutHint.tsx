@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import colors from '@/constants/colors';
 import { Exercise } from '@/types';
 import * as Haptics from 'expo-haptics';
+import { SpatialGlassCard } from '@/components/SpatialGlassCard';
 
 interface WorkoutContext {
   exercise: Exercise;
@@ -187,8 +188,14 @@ export function ReeWorkoutHint({ context, painReported, fatigueReported, onDismi
         },
       ]}
     >
-      <View style={[styles.card, { borderLeftColor: accentColor }]}>
-        <View style={styles.header}>
+      <SpatialGlassCard 
+        layer="elevated" 
+        style={[styles.card, { backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0, padding: 0, borderLeftWidth: 0 }]}
+      >
+        <View style={{ flexDirection: 'row', flex: 1 }}>
+          <View style={{ width: 3, backgroundColor: accentColor }} />
+          <View style={{ flex: 1, padding: 16 }}>
+            <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={[styles.iconContainer, { backgroundColor: accentColor + '15' }]}>
               <Sparkles size={14} color={accentColor} />
@@ -228,7 +235,9 @@ export function ReeWorkoutHint({ context, painReported, fatigueReported, onDismi
           <MessageCircle size={14} color={colors.primary} />
           <Text style={styles.askButtonText}>Ask Ree</Text>
         </TouchableOpacity>
-      </View>
+          </View>
+        </View>
+      </SpatialGlassCard>
     </Animated.View>
   );
 }

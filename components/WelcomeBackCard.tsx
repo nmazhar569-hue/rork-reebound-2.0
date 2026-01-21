@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { useApp } from '@/contexts/AppContext';
 import { Card } from '@/components/ui';
+import { SpatialGlassCard } from '@/components/SpatialGlassCard';
 import colors, { borderRadius, gradients, spacing } from '@/constants/colors';
 import { ReturnStatus } from '@/types';
 
@@ -85,7 +86,7 @@ export function WelcomeBackCard({ returnStatus, onDismiss }: WelcomeBackCardProp
   };
 
   return (
-    <Card style={styles.container}>
+    <SpatialGlassCard layer="elevated" style={styles.container}>
       <View style={styles.header}>
         <Animated.View style={[styles.iconContainer, { transform: [{ scale: pulseAnim }] }]}>
           <LinearGradient
@@ -166,7 +167,7 @@ export function WelcomeBackCard({ returnStatus, onDismiss }: WelcomeBackCardProp
           </View>
         </View>
       )}
-    </Card>
+    </SpatialGlassCard>
   );
 }
 
