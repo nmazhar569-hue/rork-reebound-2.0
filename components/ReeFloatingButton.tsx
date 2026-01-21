@@ -5,6 +5,7 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
@@ -19,6 +20,7 @@ const EDGE_PADDING = 16;
 export function ReeFloatingButton() {
   const { hasUnseenInsight } = useRee();
   
+  // Use persistent refs for animation values to prevent recreation
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.6)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -26,6 +28,7 @@ export function ReeFloatingButton() {
   const positionY = useRef(new Animated.Value(SCREEN_HEIGHT - 200)).current;
   
   const isDragging = useRef(false);
+  const hasMoved = useRef(false);
   const dragStartPosition = useRef({ x: 0, y: 0 });
   const DRAG_THRESHOLD = 5;
 
@@ -127,8 +130,7 @@ export function ReeFloatingButton() {
       onPanResponderRelease: () => {
         Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 300,
-          friction: 10,
+          duration: 1500,
           useNativeDriver: true,
         }).start();
         
@@ -136,7 +138,14 @@ export function ReeFloatingButton() {
         const currentY = (positionY as any)._value;
         snapToNearestSide(currentX, currentY);
         
-        setTimeout(() => {
+        onPanResponderTerminate: () => {
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            tension: 300,
+            friction: 10,
+            useNativeDriver: true,
+          }).start();
+          
           isDragging.current = false;
         }, 50);
       },
@@ -211,7 +220,10 @@ export function ReeFloatingButton() {
       )}
     </Animated.View>
   );
-}
+};
+
+// Memoize the component to prevent unnecessary re-renders
+export const ReeFloatingButton = memo(ReeFloatingButtonComponent);
 
 const styles = StyleSheet.create({
   floatingButton: {
