@@ -727,3 +727,48 @@ export interface ReePresenceSettings {
   showProgressInsights: boolean;
   autoMinimizeAfterSeconds: number;
 }
+
+// ============ ROUTINE ENGINE TYPES ============
+
+export type RoutineType = 'PERFORMANCE_RECOVERY' | 'INJURY_REHAB' | 'CUSTOM';
+
+export interface RoutineItem {
+  exerciseId: string;
+  targetDuration?: number; // seconds (for physio/mobility)
+  targetReps?: number;     // (for strength)
+  targetSets?: number;
+  notes?: string;
+  order: number;
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  type: RoutineType;
+  description: string; // The "Why" (Science explanation)
+  items: RoutineItem[];
+  tags: string[]; // e.g., ['knee_friendly', 'post_leg_day', 'cns_reset']
+  estimatedDuration: number; // minutes
+  targetInjuries?: KneeInjuryType[]; // Which injuries this routine is designed for
+  contraindications?: string[]; // Conditions that make this routine unsuitable
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  createdAt?: string;
+  createdBy?: 'system' | 'user';
+}
+
+export interface RoutineValidationResult {
+  safe: boolean;
+  overallRisk: 'low' | 'moderate' | 'high';
+  warnings: RoutineWarning[];
+  safeItems: string[];
+  unsafeItems: string[];
+  suggestedAlternatives: Record<string, string[]>;
+}
+
+export interface RoutineWarning {
+  exerciseId: string;
+  exerciseName: string;
+  severity: 'caution' | 'warning' | 'danger';
+  message: string;
+  biomechanicalReason: string;
+}
