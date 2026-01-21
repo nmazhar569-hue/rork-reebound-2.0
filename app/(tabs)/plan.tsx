@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { 
   ChevronRight,
@@ -13,67 +14,61 @@ import {
   Zap,
   User,
   ChevronLeft,
+  Plus,
+  Check,
+  Play,
 } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
+import { EXERCISE_LIBRARY, ExerciseEntry, ExerciseCategory } from '@/constants/database_seed';
+import { useApp } from '@/contexts/AppContext';
+import { Exercise } from '@/types';
 
-type WorkoutCategory = 'crossfit' | 'gym' | 'cardio' | 'bodyweight' | null;
-type MuscleGroup = 'chest' | 'back' | 'shoulders' | 'arms' | 'legs' | 'core' | 'glutes' | 'calves' | null;
+type CategoryKey = 'CROSSFIT' | 'GYM' | 'CARDIO' | 'BODYWEIGHT' | null;
 
 interface CategoryOption {
-  id: WorkoutCategory;
+  id: CategoryKey;
+  dbKey: ExerciseCategory;
   label: string;
   icon: React.ReactNode;
   color: string;
   description: string;
 }
 
-interface MuscleGroupOption {
-  id: MuscleGroup;
-  label: string;
-  description: string;
-}
-
 const WORKOUT_CATEGORIES: CategoryOption[] = [
   {
-    id: 'crossfit',
+    id: 'CROSSFIT',
+    dbKey: 'CROSSFIT',
     label: 'CrossFit',
     icon: <Zap size={24} color="#FFF" />,
     color: '#FF6B4A',
     description: 'High-intensity functional movements',
   },
   {
-    id: 'gym',
+    id: 'GYM',
+    dbKey: 'GYM',
     label: 'Gym',
     icon: <Dumbbell size={24} color="#FFF" />,
     color: liquidGlass.accent.primary,
     description: 'Traditional strength training',
   },
   {
-    id: 'cardio',
+    id: 'CARDIO',
+    dbKey: 'CARDIO',
     label: 'Cardio',
     icon: <Heart size={24} color="#FFF" />,
     color: '#FF6B9D',
     description: 'Endurance and conditioning',
   },
   {
-    id: 'bodyweight',
+    id: 'BODYWEIGHT',
+    dbKey: 'BODYWEIGHT',
     label: 'Bodyweight',
     icon: <User size={24} color="#FFF" />,
     color: '#9B7EFF',
     description: 'No equipment needed',
   },
-];
-
-const MUSCLE_GROUPS: MuscleGroupOption[] = [
-  { id: 'chest', label: 'Chest', description: 'Pectorals & upper body push' },
-  { id: 'back', label: 'Back', description: 'Lats, traps & rhomboids' },
-  { id: 'shoulders', label: 'Shoulders', description: 'Deltoids & rotator cuff' },
-  { id: 'arms', label: 'Arms', description: 'Biceps, triceps & forearms' },
-  { id: 'legs', label: 'Legs', description: 'Quads, hamstrings & calves' },
-  { id: 'core', label: 'Core', description: 'Abs & obliques' },
-  { id: 'glutes', label: 'Glutes', description: 'Glutes & hips' },
-  { id: 'calves', label: 'Calves', description: 'Lower leg muscles' },
 ];
 
 function GlassCard({ children, style, onPress }: { children: React.ReactNode; style?: any; onPress?: () => void }) {
@@ -94,16 +89,34 @@ function GlassCard({ children, style, onPress }: { children: React.ReactNode; st
 }
 
 export default function PlanScreen() {
-  const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>(null);
-  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>(null);
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
+  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
 
-  const handleCategorySelect = useCallback((category: WorkoutCategory) => {
+  const filteredExercises = useMemo(() => {
+    if (!selectedCategory) return [];
+    const category = WORKOUT_CATEGORIES.find(c => c.id === selectedCategory);
+    if (!category) return [];
+    return EXERCISE_LIBRARY.filter(ex => ex.category === category.dbKey);
+  }, [selectedCategory]);
+
+  const uniqueMuscleGroups = useMemo(() => {
+    const groups = [...new Set(filteredExercises.map(ex => ex.muscleGroup))];
+    return groups.sort();
+  }, [filteredExercises]);
+
+  const exercisesForMuscleGroup = useMemo(() => {
+    if (!selectedMuscleGroup) return [];
+    return filteredExercises.filter(ex => ex.muscleGroup === selectedMuscleGroup);
+  }, [filteredExercises, selectedMuscleGroup]);
+
+  const handleCategorySelect = useCallback((category: CategoryKey) => {
     haptics.medium();
     setSelectedCategory(category);
     setSelectedMuscleGroup(null);
   }, []);
 
-  const handleMuscleGroupSelect = useCallback((muscleGroup: MuscleGroup) => {
+  const handleMuscleGroupSelect = useCallback((muscleGroup: string) => {
     haptics.light();
     setSelectedMuscleGroup(muscleGroup);
   }, []);
@@ -114,8 +127,45 @@ export default function PlanScreen() {
       setSelectedMuscleGroup(null);
     } else if (selectedCategory) {
       setSelectedCategory(null);
+      setSelectedExercises([]);
     }
   }, [selectedCategory, selectedMuscleGroup]);
+
+  const convertToExercise = useCallback((entry: ExerciseEntry): Exercise => {
+    return {
+      id: entry.id,
+      name: entry.name,
+      sets: 3,
+      reps: entry.difficulty === 'Beginner' ? '10-12' : entry.difficulty === 'Intermediate' ? '8-10' : '6-8',
+      rest: entry.difficulty === 'Advanced' ? 120 : 90,
+      kneeSafeLevel: 'safe',
+      notes: `${entry.muscleGroup} exercise. Equipment: ${entry.equipment.length > 0 ? entry.equipment.join(', ') : 'None'}`,
+    };
+  }, []);
+
+  const toggleExercise = useCallback((entry: ExerciseEntry) => {
+    haptics.light();
+    setSelectedExercises(prev => {
+      const exists = prev.find(e => e.id === entry.id);
+      if (exists) {
+        return prev.filter(e => e.id !== entry.id);
+      }
+      return [...prev, convertToExercise(entry)];
+    });
+  }, [convertToExercise]);
+
+  const isExerciseSelected = useCallback((id: string) => {
+    return selectedExercises.some(e => e.id === id);
+  }, [selectedExercises]);
+
+  const handleStartWorkout = useCallback(() => {
+    if (selectedExercises.length === 0) {
+      Alert.alert('No Exercises', 'Please select at least one exercise to start.');
+      return;
+    }
+    haptics.medium();
+    router.push('/programs/builder');
+  }, [selectedExercises]);
 
   const renderCategorySelection = () => (
     <View style={styles.categoriesContainer}>
@@ -164,27 +214,31 @@ export default function PlanScreen() {
             {category?.icon}
           </View>
           <Text style={styles.categoryBadgeText}>{category?.label}</Text>
+          <Text style={styles.categoryBadgeCount}>{filteredExercises.length} exercises</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Select Muscle Group</Text>
         <Text style={styles.sectionSubtitle}>
-          Choose the target muscle group for your workout
+          {uniqueMuscleGroups.length} muscle groups available
         </Text>
 
         <View style={styles.muscleGroupList}>
-          {MUSCLE_GROUPS.map((muscle) => (
-            <GlassCard
-              key={muscle.id}
-              style={styles.muscleGroupCard}
-              onPress={() => handleMuscleGroupSelect(muscle.id)}
-            >
-              <View style={styles.muscleGroupContent}>
-                <Text style={styles.muscleGroupLabel}>{muscle.label}</Text>
-                <Text style={styles.muscleGroupDescription}>{muscle.description}</Text>
-              </View>
-              <ChevronRight size={20} color={liquidGlass.text.tertiary} />
-            </GlassCard>
-          ))}
+          {uniqueMuscleGroups.map((muscleGroup) => {
+            const count = filteredExercises.filter(ex => ex.muscleGroup === muscleGroup).length;
+            return (
+              <GlassCard
+                key={muscleGroup}
+                style={styles.muscleGroupCard}
+                onPress={() => handleMuscleGroupSelect(muscleGroup)}
+              >
+                <View style={styles.muscleGroupContent}>
+                  <Text style={styles.muscleGroupLabel}>{muscleGroup}</Text>
+                  <Text style={styles.muscleGroupDescription}>{count} exercises</Text>
+                </View>
+                <ChevronRight size={20} color={liquidGlass.text.tertiary} />
+              </GlassCard>
+            );
+          })}
         </View>
       </View>
     );
@@ -192,7 +246,6 @@ export default function PlanScreen() {
 
   const renderWorkoutList = () => {
     const category = WORKOUT_CATEGORIES.find(c => c.id === selectedCategory);
-    const muscleGroup = MUSCLE_GROUPS.find(m => m.id === selectedMuscleGroup);
 
     return (
       <View style={styles.workoutListContainer}>
@@ -211,25 +264,62 @@ export default function PlanScreen() {
           </View>
           <ChevronRight size={14} color={liquidGlass.text.tertiary} />
           <View style={styles.breadcrumbBadge}>
-            <Text style={styles.breadcrumbText}>{muscleGroup?.label}</Text>
+            <Text style={styles.breadcrumbText}>{selectedMuscleGroup}</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>{muscleGroup?.label} Workouts</Text>
+        <Text style={styles.sectionTitle}>{selectedMuscleGroup}</Text>
         <Text style={styles.sectionSubtitle}>
-          {category?.label} exercises targeting {muscleGroup?.label.toLowerCase()}
+          {exercisesForMuscleGroup.length} exercises available · Tap to select
         </Text>
 
-        <GlassCard style={styles.placeholderCard}>
-          <View style={styles.placeholderIcon}>
-            <Dumbbell size={48} color={liquidGlass.text.tertiary} />
+        <View style={styles.exerciseList}>
+          {exercisesForMuscleGroup.map((exercise) => {
+            const isSelected = isExerciseSelected(exercise.id);
+            const difficultyColor = exercise.difficulty === 'Beginner' ? '#22C55E' : exercise.difficulty === 'Intermediate' ? '#EAB308' : '#EF4444';
+            
+            return (
+              <TouchableOpacity
+                key={exercise.id}
+                style={[styles.exerciseCard, isSelected && styles.exerciseCardSelected]}
+                onPress={() => toggleExercise(exercise)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.exerciseContent}>
+                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                  <Text style={styles.exerciseMeta}>
+                    {exercise.equipment.length > 0 ? exercise.equipment.slice(0, 2).join(', ') : 'No equipment'}
+                  </Text>
+                </View>
+                <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor + '20' }]}>
+                  <Text style={[styles.difficultyText, { color: difficultyColor }]}>{exercise.difficulty}</Text>
+                </View>
+                <View style={[styles.selectButton, isSelected && styles.selectButtonActive]}>
+                  {isSelected ? (
+                    <Check size={18} color="#FFF" />
+                  ) : (
+                    <Plus size={18} color={liquidGlass.accent.primary} />
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {selectedExercises.length > 0 && (
+          <View style={styles.floatingAction}>
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleStartWorkout}
+              activeOpacity={0.9}
+            >
+              <Play size={20} color="#FFF" fill="#FFF" />
+              <Text style={styles.startButtonText}>
+                Build Workout ({selectedExercises.length})
+              </Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.placeholderTitle}>Workouts Coming Soon</Text>
-          <Text style={styles.placeholderText}>
-            Workout exercises for this muscle group will be added soon. 
-            You can provide the workout data later.
-          </Text>
-        </GlassCard>
+        )}
       </View>
     );
   };
@@ -417,34 +507,82 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: liquidGlass.text.primary,
   },
-  placeholderCard: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 24,
+  categoryBadgeCount: {
+    fontSize: 13,
+    color: liquidGlass.text.tertiary,
+    marginLeft: 8,
   },
-  placeholderIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  exerciseList: {
+    gap: 10,
+  },
+  exerciseCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    gap: 12,
+  },
+  exerciseCardSelected: {
+    borderColor: liquidGlass.accent.primary,
+    backgroundColor: liquidGlass.accent.primary + '10',
+  },
+  exerciseContent: {
+    flex: 1,
+  },
+  exerciseName: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.primary,
+    marginBottom: 4,
+  },
+  exerciseMeta: {
+    fontSize: 13,
+    color: liquidGlass.text.tertiary,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  difficultyText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+  },
+  selectButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: liquidGlass.surface.glassDark,
     borderWidth: 1,
     borderColor: liquidGlass.border.glassLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
   },
-  placeholderTitle: {
-    fontSize: 20,
+  selectButtonActive: {
+    backgroundColor: liquidGlass.accent.primary,
+    borderColor: liquidGlass.accent.primary,
+  },
+  floatingAction: {
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: liquidGlass.accent.primary,
+    paddingVertical: 16,
+    borderRadius: 50,
+    ...glassShadows.glow,
+  },
+  startButtonText: {
+    fontSize: 17,
     fontWeight: '700' as const,
-    color: liquidGlass.text.primary,
-    marginBottom: 10,
-  },
-  placeholderText: {
-    fontSize: 15,
-    color: liquidGlass.text.secondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    maxWidth: 300,
+    color: '#FFF',
   },
   bottomSpacer: { 
     height: glassLayout.tabBarHeight,
