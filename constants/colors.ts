@@ -1,78 +1,78 @@
 const colors = {
-  // Primary - Soft Teal/Cyan
-  primary: '#3ECFCF',
-  primaryLight: '#6EDEDE',
-  primaryDark: '#28A8A8',
-  primaryMuted: 'rgba(62, 207, 207, 0.12)',
+  // Primary - Vibrant Teal/Cyan (brightened for better contrast)
+  primary: '#00D9A3',
+  primaryLight: '#4BFFCA',
+  primaryDark: '#00B885',
+  primaryMuted: 'rgba(0, 217, 163, 0.15)',
   
-  // Accent - Warm Coral/Orange
-  accent: '#F28B6A',
-  accentLight: '#F7AC94',
-  accentDark: '#E06B48',
-  accentMuted: 'rgba(242, 139, 106, 0.12)',
+  // Accent - Warm Coral/Orange (more vibrant)
+  accent: '#FF6B4A',
+  accentLight: '#FF9478',
+  accentDark: '#E5512E',
+  accentMuted: 'rgba(255, 107, 74, 0.15)',
   
   // Legacy alias for backwards compatibility
-  secondary: '#F28B6A',
-  secondaryLight: '#F7AC94',
-  secondaryDark: '#E06B48',
+  secondary: '#FF6B4A',
+  secondaryLight: '#FF9478',
+  secondaryDark: '#E5512E',
   
-  // Functional Colors (softened, rounded feel)
-  success: '#5ABF8C',
-  successMuted: 'rgba(90, 191, 140, 0.12)',
-  warning: '#F6B04A',
-  warningMuted: 'rgba(246, 176, 74, 0.12)',
-  danger: '#EF8080',
-  dangerMuted: 'rgba(239, 128, 128, 0.12)',
-  error: '#EF8080',
-  errorLight: 'rgba(239, 128, 128, 0.12)',
-  info: '#6BC4E0',
-  infoMuted: 'rgba(107, 196, 224, 0.12)',
+  // Functional Colors (more vibrant for better visibility)
+  success: '#00D9A3',
+  successMuted: 'rgba(0, 217, 163, 0.15)',
+  warning: '#FFB84D',
+  warningMuted: 'rgba(255, 184, 77, 0.15)',
+  danger: '#FF5757',
+  dangerMuted: 'rgba(255, 87, 87, 0.15)',
+  error: '#FF5757',
+  errorLight: 'rgba(255, 87, 87, 0.15)',
+  info: '#4DA6FF',
+  infoMuted: 'rgba(77, 166, 255, 0.15)',
 
-  // Backgrounds (warm, calm)
-  background: '#F9FAFB',
-  backgroundWarm: '#FDFCFB',
+  // Backgrounds (cleaner, more modern)
+  background: '#FAFBFC',
+  backgroundWarm: '#FFFFFF',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-  surfaceDim: '#F5F6F7',
+  surfaceDim: '#F5F7FA',
   
-  // Typography (softer contrast)
-  text: '#2A3540',
-  textSecondary: '#6B7C87',
-  textTertiary: '#A3B0B8',
+  // Typography (better contrast)
+  text: '#1A1F36',
+  textSecondary: '#6B7C93',
+  textTertiary: '#9AA5B1',
   textInverted: '#FFFFFF',
 
-  // Borders & Dividers (invisible, flow-based)
-  border: '#EEF1F3',
-  borderLight: '#F5F7F8',
-  borderSubtle: 'rgba(0, 0, 0, 0.04)',
+  // Borders & Dividers (cleaner, more defined)
+  border: '#E4E7EB',
+  borderLight: '#F0F3F7',
+  borderSubtle: 'rgba(0, 0, 0, 0.06)',
   
   // Overlays
-  overlay: 'rgba(42, 53, 64, 0.35)',
-  overlayLight: 'rgba(42, 53, 64, 0.08)',
+  overlay: 'rgba(26, 31, 54, 0.4)',
+  overlayLight: 'rgba(26, 31, 54, 0.1)',
   
   // Gradient colors (for LinearGradient usage)
-  gradientStart: '#3ECFCF',
-  gradientEnd: '#F28B6A',
+  gradientStart: '#00D9A3',
+  gradientEnd: '#FF6B4A',
   gradientMid: '#7DD4B8',
 };
 
 export const gradients = {
   // Main gradient - teal to coral (for progress, focus, state)
-  primary: ['#3ECFCF', '#F28B6A'] as const,
-  primarySoft: ['#6EDEDE', '#F7AC94'] as const,
-  primarySubtle: ['rgba(62, 207, 207, 0.10)', 'rgba(242, 139, 106, 0.10)'] as const,
+  primary: ['#00D9A3', '#FF6B4A'] as const,
+  primarySoft: ['#4BFFCA', '#FF9478'] as const,
+  primarySubtle: ['rgba(0, 217, 163, 0.12)', 'rgba(255, 107, 74, 0.12)'] as const,
   
   // Surface gradients (very subtle depth)
   surface: ['#FFFFFF', '#FAFBFC'] as const,
   surfaceWarm: ['#FFFFFF', '#FDFCFA'] as const,
   
   // State gradients
-  ready: ['#5ABF8C', '#3ECFCF'] as const,
-  caution: ['#F6B04A', '#F28B6A'] as const,
-  rest: ['#F28B6A', '#EF8080'] as const,
+  ready: ['#00D9A3', '#4BFFCA'] as const,
+  caution: ['#FFB84D', '#FF6B4A'] as const,
+  rest: ['#FF6B4A', '#FF5757'] as const,
   
   // Card backgrounds (ultra subtle)
-  cardGlow: ['rgba(62, 207, 207, 0.06)', 'rgba(242, 139, 106, 0.03)'] as const,
+  cardGlow: ['rgba(0, 217, 163, 0.08)', 'rgba(255, 107, 74, 0.05)'] as const,
 };
 
 export const spacing = {
@@ -105,38 +105,38 @@ export const shadows = {
     elevation: 0,
   },
   soft: {
-    shadowColor: '#2A3540',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
+    shadowColor: '#1A1F36',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 2,
   },
   medium: {
-    shadowColor: '#2A3540',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.05,
-    shadowRadius: 14,
+    shadowColor: '#1A1F36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
     elevation: 3,
   },
   lifted: {
-    shadowColor: '#2A3540',
+    shadowColor: '#1A1F36',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.07,
-    shadowRadius: 20,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 5,
   },
   glow: (color: string) => ({
     shadowColor: color,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
     elevation: 6,
   }),
   glowSoft: (color: string) => ({
     shadowColor: color,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
     elevation: 4,
   }),
 };
