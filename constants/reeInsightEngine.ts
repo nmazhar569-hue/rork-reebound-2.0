@@ -18,7 +18,7 @@ export function generateContextualInsight(
   screen: ReeScreenContext,
   context: InsightContext
 ): ReeContextualInsight | null {
-  const { isReturning, daysAway, painLevel, confidence, isFirstVisit, hasTodayWorkout } = context;
+  const { isReturning, daysAway, painLevel, confidence, isFirstVisit } = context;
 
   if (screen === 'home') {
     if (isReturning && daysAway > 3) {
@@ -29,6 +29,7 @@ export function generateContextualInsight(
         priority: 1,
         message: `Welcome back! It's been ${daysAway} days. Let's ease into things.`,
         expandedMessage: 'Your body may need some time to readjust. Consider starting with lighter activities.',
+        screenContext: screen,
       };
     }
 
@@ -40,6 +41,7 @@ export function generateContextualInsight(
         priority: 1,
         message: 'Your pain level is elevated today. Focus on recovery.',
         expandedMessage: 'Listen to your body. Recovery exercises might be more beneficial than intense training.',
+        screenContext: screen,
       };
     }
 
@@ -50,6 +52,7 @@ export function generateContextualInsight(
         category: 'orientation',
         priority: 2,
         message: 'This is your home base. Check in daily to track your progress.',
+        screenContext: screen,
       };
     }
   }
@@ -63,6 +66,7 @@ export function generateContextualInsight(
         priority: 2,
         message: 'You don\'t have an active program yet. Want to build one?',
         expandedMessage: 'A structured program can help you stay consistent and track progress.',
+        screenContext: screen,
       };
     }
 
@@ -73,6 +77,7 @@ export function generateContextualInsight(
         category: 'orientation',
         priority: 2,
         message: 'This is where you manage your training plan.',
+        screenContext: screen,
       };
     }
   }
@@ -86,6 +91,7 @@ export function generateContextualInsight(
         priority: 2,
         message: 'Recovery exercises can help reduce discomfort.',
         expandedMessage: 'Gentle movement and stretching promote blood flow and healing.',
+        screenContext: screen,
       };
     }
   }
@@ -98,11 +104,12 @@ export function generateContextualInsight(
         category: 'orientation',
         priority: 2,
         message: 'Track your journey here. Every step counts.',
+        screenContext: screen,
       };
     }
   }
 
-  if (screen === 'workout') {
+  if (screen === 'workout_active') {
     if (confidence === 'low') {
       return {
         id: `low-confidence-workout-${Date.now()}`,
@@ -110,6 +117,7 @@ export function generateContextualInsight(
         category: 'confidence',
         priority: 1,
         message: 'It\'s okay to take it easy. Modify exercises as needed.',
+        screenContext: screen,
       };
     }
   }
@@ -128,6 +136,7 @@ export function generateHomeInsight(context: InsightContext): ReeContextualInsig
       priority: 1,
       message: 'It\'s been a while. Let\'s start fresh together.',
       expandedMessage: 'No pressure. We\'ll build back gradually at your pace.',
+      screenContext: 'home',
     };
   }
 
@@ -138,6 +147,7 @@ export function generateHomeInsight(context: InsightContext): ReeContextualInsig
       category: 'confidence',
       priority: 3,
       message: 'You\'re feeling great today! Make the most of it.',
+      screenContext: 'home',
     };
   }
 
@@ -148,6 +158,7 @@ export function generateHomeInsight(context: InsightContext): ReeContextualInsig
       category: 'choice_support',
       priority: 2,
       message: 'Your workout is ready when you are.',
+      screenContext: 'home',
     };
   }
 

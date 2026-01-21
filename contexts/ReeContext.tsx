@@ -6,7 +6,6 @@ import {
   ReeScreenContext,
   ReeContextualInsight,
   ReePresenceSettings,
-  IntentProfile,
 } from '@/types';
 import { useApp } from './AppContext';
 import {

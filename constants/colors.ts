@@ -23,6 +23,8 @@ const colors = {
   warningMuted: 'rgba(246, 176, 74, 0.12)',
   danger: '#EF8080',
   dangerMuted: 'rgba(239, 128, 128, 0.12)',
+  error: '#EF8080',
+  errorLight: 'rgba(239, 128, 128, 0.12)',
   info: '#6BC4E0',
   infoMuted: 'rgba(107, 196, 224, 0.12)',
 
