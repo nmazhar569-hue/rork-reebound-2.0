@@ -1,24 +1,24 @@
 const colors = {
-  // Primary - Vibrant Teal/Cyan (brightened for better contrast)
-  primary: '#00D9A3',
-  primaryLight: '#4BFFCA',
-  primaryDark: '#00B885',
-  primaryMuted: 'rgba(0, 217, 163, 0.15)',
+  // Primary Active - Teal Blue (Momentum)
+  primary: '#00C2B8',
+  primaryLight: '#33D4CB',
+  primaryDark: '#009E95',
+  primaryMuted: 'rgba(0, 194, 184, 0.15)',
   
-  // Accent - Warm Coral/Orange (more vibrant)
-  accent: '#FF6B4A',
-  accentLight: '#FF9478',
-  accentDark: '#E5512E',
-  accentMuted: 'rgba(255, 107, 74, 0.15)',
+  // Primary Recovery - Warm Orange (Recovery)
+  accent: '#FF7A50',
+  accentLight: '#FF9B7A',
+  accentDark: '#E55A30',
+  accentMuted: 'rgba(255, 122, 80, 0.15)',
   
   // Legacy alias for backwards compatibility
-  secondary: '#FF6B4A',
-  secondaryLight: '#FF9478',
-  secondaryDark: '#E5512E',
+  secondary: '#FF7A50',
+  secondaryLight: '#FF9B7A',
+  secondaryDark: '#E55A30',
   
-  // Functional Colors (more vibrant for better visibility)
-  success: '#00D9A3',
-  successMuted: 'rgba(0, 217, 163, 0.15)',
+  // Functional Colors
+  success: '#00C2B8',
+  successMuted: 'rgba(0, 194, 184, 0.15)',
   warning: '#FFB84D',
   warningMuted: 'rgba(255, 184, 77, 0.15)',
   danger: '#FF5757',
@@ -28,51 +28,72 @@ const colors = {
   info: '#4DA6FF',
   infoMuted: 'rgba(77, 166, 255, 0.15)',
 
-  // Backgrounds (cleaner, more modern)
-  background: '#FAFBFC',
+  // Backgrounds (clean, light off-white)
+  background: '#F8F9FB',
   backgroundWarm: '#FFFFFF',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-  surfaceDim: '#F5F7FA',
+  surfaceDim: '#F2F4F7',
   
-  // Typography (better contrast)
+  // Workout-specific backgrounds
+  workoutBackground: '#F5F7FA',
+  workoutSurface: 'rgba(255, 255, 255, 0.92)',
+  workoutCardBg: 'rgba(255, 255, 255, 0.85)',
+  
+  // Typography
   text: '#1A1F36',
   textSecondary: '#6B7C93',
   textTertiary: '#9AA5B1',
   textInverted: '#FFFFFF',
 
-  // Borders & Dividers (cleaner, more defined)
+  // Borders & Dividers
   border: '#E4E7EB',
   borderLight: '#F0F3F7',
   borderSubtle: 'rgba(0, 0, 0, 0.06)',
+  borderTeal: 'rgba(0, 194, 184, 0.3)',
   
   // Overlays
   overlay: 'rgba(26, 31, 54, 0.4)',
   overlayLight: 'rgba(26, 31, 54, 0.1)',
   
-  // Gradient colors (for LinearGradient usage)
-  gradientStart: '#00D9A3',
-  gradientEnd: '#FF6B4A',
+  // Gradient colors (Momentum & Recovery Flow)
+  gradientStart: '#00C2B8',
+  gradientEnd: '#FF7A50',
   gradientMid: '#7DD4B8',
 };
 
 export const gradients = {
-  // Main gradient - teal to coral (for progress, focus, state)
-  primary: ['#00D9A3', '#FF6B4A'] as const,
-  primarySoft: ['#4BFFCA', '#FF9478'] as const,
-  primarySubtle: ['rgba(0, 217, 163, 0.12)', 'rgba(255, 107, 74, 0.12)'] as const,
+  // Core Momentum & Recovery gradient
+  primary: ['#00C2B8', '#FF7A50'] as const,
+  primarySoft: ['#33D4CB', '#FF9B7A'] as const,
+  primarySubtle: ['rgba(0, 194, 184, 0.12)', 'rgba(255, 122, 80, 0.12)'] as const,
   
-  // Surface gradients (very subtle depth)
-  surface: ['#FFFFFF', '#FAFBFC'] as const,
+  // Active workout gradients (teal-focused)
+  active: ['#00C2B8', '#33D4CB'] as const,
+  activeGlow: ['#00C2B8', '#009E95'] as const,
+  
+  // Recovery gradients (orange-focused)
+  recovery: ['#FF7A50', '#FF9B7A'] as const,
+  recoveryGlow: ['#FF7A50', '#E55A30'] as const,
+  
+  // Surface gradients
+  surface: ['#FFFFFF', '#F8F9FB'] as const,
   surfaceWarm: ['#FFFFFF', '#FDFCFA'] as const,
+  workoutBg: ['#F5F7FA', '#EEF1F5'] as const,
   
   // State gradients
-  ready: ['#00D9A3', '#4BFFCA'] as const,
-  caution: ['#FFB84D', '#FF6B4A'] as const,
-  rest: ['#FF6B4A', '#FF5757'] as const,
+  ready: ['#00C2B8', '#33D4CB'] as const,
+  caution: ['#FFB84D', '#FF7A50'] as const,
+  rest: ['#FF7A50', '#FF9B7A'] as const,
   
-  // Card backgrounds (ultra subtle)
-  cardGlow: ['rgba(0, 217, 163, 0.08)', 'rgba(255, 107, 74, 0.05)'] as const,
+  // Card backgrounds
+  cardGlow: ['rgba(0, 194, 184, 0.08)', 'rgba(255, 122, 80, 0.05)'] as const,
+  cardTeal: ['rgba(0, 194, 184, 0.06)', 'rgba(0, 194, 184, 0.02)'] as const,
+  
+  // Button gradients
+  startButton: ['#00C2B8', '#009E95'] as const,
+  finishButton: ['#FF7A50', '#E55A30'] as const,
+  completionWave: ['#00C2B8', '#FF7A50'] as const,
 };
 
 export const spacing = {

@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Switch, Alert, Platform, ActivityIndicator } from 'react-native';
-import { User, LogOut, Shield, Smartphone, Mail, Trash2, Heart, Activity, RefreshCw, Link2, Unlink, Sparkles, Star } from 'lucide-react-native';
+import { User, LogOut, Shield, Smartphone, Mail, Trash2, Heart, Activity, RefreshCw, Link2, Unlink, Sparkles, Star, Clock, Dumbbell, ChevronRight, Moon, Zap, Calendar, AlertTriangle } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHealth } from '@/contexts/HealthContext';
@@ -8,8 +8,11 @@ import { Stack, useRouter } from 'expo-router';
 import { useApp } from '@/contexts/AppContext';
 import { Card, SolidButton } from '@/components/ui';
 import { SelectionChips } from '@/components/ui/FormElements';
+import { storageService } from '@/services/StorageService';
+import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import colors, { borderRadius, layout } from '@/constants/colors';
-import { SleepQuality, ActivityLevel, StressLevel, DietPreference, NutritionGoal, AppetiteLevel, UserProfile, GenderIdentity, ExplanationDepth, HeightUnit, WeightUnit, HealthPlatform } from '@/types';
+import { SleepQuality, ActivityLevel, StressLevel, DietPreference, NutritionGoal, AppetiteLevel, UserProfile, GenderIdentity, ExplanationDepth, HeightUnit, WeightUnit, HealthPlatform, WorkoutSession } from '@/types';
+import { haptics } from '@/utils/haptics';
 
 const OPTIONS = {
   gender: [
@@ -81,14 +84,32 @@ const feetToCm = (feetStr: string): number => {
 const kgToLb = (kg: number): number => Math.round(kg * 2.205);
 const lbToKg = (lb: number): number => Math.round(lb / 2.205);
 
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'short', 
+    month: 'short', 
+    day: 'numeric' 
+  });
+};
+
+const formatDuration = (minutes: number): string => {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+};
+
 export default function ProfileScreen() {
-  const { userProfile, updateUserProfile, getIdentityTitles } = useApp();
+  const { userProfile, updateUserProfile, getIdentityTitles, dailyLogs } = useApp();
   const identityTitles = getIdentityTitles();
   const router = useRouter();
   const { user, isAuthenticated, appleAuthAvailable, signInWithApple, signInWithGoogle, signOut, deleteAccount, isLoading: authLoading } = useAuth();
   const { settings: healthSettings, isConnected: healthConnected, connectPlatform, disconnect: disconnectHealth, syncHealthData, isPedometerAvailable } = useHealth();
   const [signingIn, setSigningIn] = useState(false);
   const [connectingHealth, setConnectingHealth] = useState(false);
+  const [workoutHistory, setWorkoutHistory] = useState<WorkoutSession[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
 
   const storedHeightUnit = userProfile?.unitPreferences?.height || 'cm';
   const storedWeightUnit = userProfile?.unitPreferences?.weight || 'kg';
@@ -119,6 +140,23 @@ export default function ProfileScreen() {
   const [heightUnit, setHeightUnit] = useState<HeightUnit>(storedHeightUnit);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(storedWeightUnit);
   const [northStar, setNorthStar] = useState(userProfile?.northStar || '');
+
+  useEffect(() => {
+    loadWorkoutHistory();
+  }, []);
+
+  const loadWorkoutHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const history = await storageService.getWorkoutHistory();
+      setWorkoutHistory(history);
+      console.log('[ProfileScreen] Loaded workout history:', history.length, 'sessions');
+    } catch (error) {
+      console.error('[ProfileScreen] Error loading workout history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   const handleHeightUnitChange = useCallback((newUnit: HeightUnit) => {
     if (newUnit === heightUnit) return;
@@ -229,14 +267,155 @@ export default function ProfileScreen() {
     Alert.alert('Synced', 'Health data has been refreshed.');
   };
 
+  const handleClearAllData = () => {
+    haptics.warning();
+    Alert.alert(
+      'Clear All Data',
+      'This will permanently delete all workout history and reset the app. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Clear Everything', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              await storageService.clearHistory();
+              setWorkoutHistory([]);
+              Alert.alert('Data Cleared', 'All workout history has been deleted.');
+              console.log('[ProfileScreen] All data cleared');
+            } catch (error) {
+              console.error('[ProfileScreen] Error clearing data:', error);
+              Alert.alert('Error', 'Failed to clear data. Please try again.');
+            }
+          }
+        },
+      ]
+    );
+  };
+
+  const userName = userProfile?.questionnaireProfile?.preferredName || 'Athlete';
+  const baselineSleep = userProfile?.baselineSleep ?? 7.5;
+  const baselineHrv = userProfile?.baselineHrv ?? 50;
+  const totalWorkouts = workoutHistory.length;
+  const totalVolume = workoutHistory.reduce((sum, w) => sum + w.totalVolume, 0);
+  const totalMinutes = workoutHistory.reduce((sum, w) => sum + w.durationMinutes, 0);
+
   return (
     <>
-      <Stack.Screen options={{ title: 'Your Profile', headerBackTitle: 'Back' }} />
+      <Stack.Screen options={{ 
+        title: 'Profile', 
+        headerBackTitle: 'Back',
+        headerStyle: { backgroundColor: liquidGlass.background.primary },
+        headerTintColor: liquidGlass.text.primary,
+      }} />
       <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          
+          <View style={styles.heroSection}>
+            <View style={styles.avatarLarge}>
+              <Text style={styles.avatarLargeText}>{userName.charAt(0).toUpperCase()}</Text>
+            </View>
+            <Text style={styles.heroName}>{userName}</Text>
+            <Text style={styles.heroSubtitle}>
+              {userProfile?.goal ? userProfile.goal.replace('_', ' ').toLowerCase() : 'General fitness'}
+            </Text>
+            
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Moon size={16} color={liquidGlass.accent.primary} />
+                <Text style={styles.statValue}>{baselineSleep}h</Text>
+                <Text style={styles.statLabel}>Sleep Base</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Heart size={16} color={liquidGlass.accent.primary} />
+                <Text style={styles.statValue}>{baselineHrv}</Text>
+                <Text style={styles.statLabel}>HRV Base</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Dumbbell size={16} color={liquidGlass.accent.primary} />
+                <Text style={styles.statValue}>{totalWorkouts}</Text>
+                <Text style={styles.statLabel}>Workouts</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.glassSection}>
+            <View style={styles.sectionHeader}>
+              <Clock size={18} color={liquidGlass.accent.primary} />
+              <Text style={styles.glassSectionTitle}>Workout History</Text>
+            </View>
+            
+            {loadingHistory ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={liquidGlass.accent.primary} />
+              </View>
+            ) : workoutHistory.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Dumbbell size={32} color={liquidGlass.text.tertiary} />
+                <Text style={styles.emptyStateText}>No workouts logged yet</Text>
+                <Text style={styles.emptyStateSubtext}>Complete your first session to see it here</Text>
+              </View>
+            ) : (
+              <View style={styles.historyList}>
+                {workoutHistory.slice(0, 5).map((workout, index) => (
+                  <View 
+                    key={workout.id} 
+                    style={[
+                      styles.historyItem,
+                      index < Math.min(workoutHistory.length, 5) - 1 && styles.historyItemBorder
+                    ]}
+                  >
+                    <View style={styles.historyItemLeft}>
+                      <View style={styles.historyDateBadge}>
+                        <Calendar size={12} color={liquidGlass.accent.primary} />
+                        <Text style={styles.historyDate}>{formatDate(workout.date)}</Text>
+                      </View>
+                      <Text style={styles.historyExercises}>
+                        {workout.exercises.length} exercises
+                      </Text>
+                    </View>
+                    <View style={styles.historyItemRight}>
+                      <View style={styles.historyMeta}>
+                        <Clock size={12} color={liquidGlass.text.tertiary} />
+                        <Text style={styles.historyMetaText}>{formatDuration(workout.durationMinutes)}</Text>
+                      </View>
+                      <View style={styles.historyMeta}>
+                        <Zap size={12} color={liquidGlass.text.tertiary} />
+                        <Text style={styles.historyMetaText}>{workout.totalVolume.toLocaleString()} lbs</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+                
+                {workoutHistory.length > 5 && (
+                  <TouchableOpacity style={styles.viewAllBtn}>
+                    <Text style={styles.viewAllText}>View all {workoutHistory.length} workouts</Text>
+                    <ChevronRight size={16} color={liquidGlass.accent.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {totalWorkouts > 0 && (
+              <View style={styles.historySummary}>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryValue}>{formatDuration(totalMinutes)}</Text>
+                  <Text style={styles.summaryLabel}>Total Time</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryValue}>{totalVolume.toLocaleString()}</Text>
+                  <Text style={styles.summaryLabel}>Total Volume (lbs)</Text>
+                </View>
+              </View>
+            )}
+          </View>
+
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Personalize Your Plan</Text>
-            <Text style={styles.headerSubtitle}>The more we know, the better we can adjust your training and recovery.</Text>
+            <Text style={styles.headerTitle}>Settings</Text>
+            <Text style={styles.headerSubtitle}>Customize your training and recovery preferences</Text>
           </View>
 
           <Card style={styles.section}>
@@ -510,6 +689,20 @@ export default function ProfileScreen() {
           </Card>
         )}
 
+          <View style={styles.glassSection}>
+            <View style={styles.sectionHeader}>
+              <AlertTriangle size={18} color={liquidGlass.status.danger} />
+              <Text style={[styles.glassSectionTitle, { color: liquidGlass.status.danger }]}>Developer Tools</Text>
+            </View>
+            <Text style={styles.devToolsDescription}>
+              Use these options for testing and debugging. Data deletion is permanent.
+            </Text>
+            <TouchableOpacity style={styles.dangerButton} onPress={handleClearAllData}>
+              <Trash2 size={18} color={liquidGlass.status.danger} />
+              <Text style={styles.dangerButtonText}>Clear All Workout Data</Text>
+            </TouchableOpacity>
+          </View>
+
           <SolidButton label="Save Changes" onPress={handleSave} style={styles.saveButton} />
         </ScrollView>
       </SafeAreaView>
@@ -518,8 +711,216 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: liquidGlass.background.primary },
   scrollContent: { padding: layout.screenPadding, paddingBottom: 40 },
+  
+  heroSection: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    marginBottom: 24,
+  },
+  avatarLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: liquidGlass.accent.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    ...glassShadows.glow,
+  },
+  avatarLargeText: {
+    fontSize: 32,
+    fontWeight: '800' as const,
+    color: liquidGlass.text.inverse,
+  },
+  heroName: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    color: liquidGlass.text.secondary,
+    textTransform: 'capitalize',
+    marginBottom: 24,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: liquidGlass.surface.glass,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
+    marginTop: 6,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: liquidGlass.text.tertiary,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: liquidGlass.border.glassLight,
+  },
+
+  glassSection: {
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    padding: 20,
+    marginBottom: 24,
+    ...glassShadows.soft,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  glassSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.primary,
+  },
+
+  historyList: {
+    gap: 0,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  historyItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: liquidGlass.border.subtle,
+  },
+  historyItemLeft: {
+    flex: 1,
+  },
+  historyDateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  historyDate: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.primary,
+  },
+  historyExercises: {
+    fontSize: 13,
+    color: liquidGlass.text.tertiary,
+  },
+  historyItemRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  historyMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  historyMetaText: {
+    fontSize: 12,
+    color: liquidGlass.text.secondary,
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: liquidGlass.border.subtle,
+    marginTop: 8,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: liquidGlass.accent.primary,
+  },
+  historySummary: {
+    flexDirection: 'row',
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: liquidGlass.border.glass,
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: liquidGlass.border.glassLight,
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: liquidGlass.accent.primary,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: liquidGlass.text.tertiary,
+    marginTop: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.secondary,
+    marginTop: 12,
+  },
+  emptyStateSubtext: {
+    fontSize: 13,
+    color: liquidGlass.text.tertiary,
+    marginTop: 4,
+  },
+
+  devToolsDescription: {
+    fontSize: 13,
+    color: liquidGlass.text.tertiary,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  dangerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: liquidGlass.status.dangerMuted,
+    borderWidth: 1,
+    borderColor: liquidGlass.status.danger + '40',
+  },
+  dangerButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: liquidGlass.status.danger,
+  },
+
   header: { marginBottom: 24 },
   headerTitle: { fontSize: 24, fontWeight: '700' as const, color: colors.text, marginBottom: 8 },
   headerSubtitle: { fontSize: 15, color: colors.textSecondary, lineHeight: 22 },

@@ -28,6 +28,7 @@ const STORAGE_KEYS = {
   REFLECTIONS: 'reflections',
   RETURN_ACKNOWLEDGED: 'return_acknowledged',
   SEEN_EXPLANATIONS: 'seen_explanations',
+  USER_POINTS: 'user_points',
 };
 
 const INACTIVITY_THRESHOLD_DAYS = 3;
@@ -62,6 +63,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [reflections, setReflections] = useState<ReflectionEntry[]>([]);
   const [returnAcknowledged, setReturnAcknowledged] = useState(false);
   const [seenExplanations, setSeenExplanations] = useState<string[]>([]);
+  const [userPoints, setUserPoints] = useState<number>(0);
 
   useEffect(() => {
     loadData();
@@ -132,6 +134,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
       if (seenExplanationsData) {
         setSeenExplanations(JSON.parse(seenExplanationsData) as string[]);
+      }
+
+      const pointsData = await AsyncStorage.getItem(STORAGE_KEYS.USER_POINTS);
+      if (pointsData) {
+        setUserPoints(parseInt(pointsData, 10));
+        console.log('[AppContext] Loaded user points:', pointsData);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -516,6 +524,27 @@ export const [AppProvider, useApp] = createContextHook(() => {
     return seenExplanations;
   };
 
+  const addPoints = async (points: number) => {
+    try {
+      const newTotal = userPoints + points;
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_POINTS, newTotal.toString());
+      setUserPoints(newTotal);
+      console.log('[AppContext] Added', points, 'points. New total:', newTotal);
+    } catch (error) {
+      console.error('[AppContext] Error adding points:', error);
+    }
+  };
+
+  const resetPoints = async () => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_POINTS, '0');
+      setUserPoints(0);
+      console.log('[AppContext] Points reset to 0');
+    } catch (error) {
+      console.error('[AppContext] Error resetting points:', error);
+    }
+  };
+
   const getIdentityTitles = (): IdentityTitle[] => {
     const totalWorkouts = dailyLogs.filter(log => log.workoutCompleted).length;
     const totalRecoverySessions = dailyLogs.filter(log => log.recoveryCompleted).length;
@@ -598,6 +627,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     isLoading,
     reflections,
     seenExplanations,
+    userPoints,
     completeOnboarding,
     logWorkout,
     logReadiness,
@@ -618,6 +648,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     getIdentityTitles,
     markExplanationSeen,
     getSeenExplanations,
+    addPoints,
+    resetPoints,
     getInjuryContext,
     getCurrentPainGuidance,
     getFilterContext,

@@ -1,93 +1,122 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
   TouchableOpacity,
+  Alert,
 } from 'react-native';
-
 import { 
   ChevronRight,
   Dumbbell,
   Heart,
   Zap,
   User,
+  ChevronLeft,
+  Plus,
+  Check,
+  Play,
 } from 'lucide-react-native';
-import { PageHeader, Card } from '@/components/ui';
-import colors, { borderRadius, layout, shadows } from '@/constants/colors';
+import { router } from 'expo-router';
+import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
+import { EXERCISE_LIBRARY, ExerciseEntry, ExerciseCategory } from '@/constants/database_seed';
+import { useApp } from '@/contexts/AppContext';
+import { Exercise } from '@/types';
 
-type WorkoutCategory = 'crossfit' | 'gym' | 'cardio' | 'bodyweight' | null;
-type MuscleGroup = 'chest' | 'back' | 'shoulders' | 'arms' | 'legs' | 'core' | 'glutes' | 'calves' | null;
+type CategoryKey = 'CROSSFIT' | 'GYM' | 'CARDIO' | 'BODYWEIGHT' | null;
 
 interface CategoryOption {
-  id: WorkoutCategory;
+  id: CategoryKey;
+  dbKey: ExerciseCategory;
   label: string;
   icon: React.ReactNode;
   color: string;
   description: string;
 }
 
-interface MuscleGroupOption {
-  id: MuscleGroup;
-  label: string;
-  description: string;
-}
-
 const WORKOUT_CATEGORIES: CategoryOption[] = [
   {
-    id: 'crossfit',
+    id: 'CROSSFIT',
+    dbKey: 'CROSSFIT',
     label: 'CrossFit',
-    icon: <Zap size={28} color={colors.surface} />,
-    color: colors.accent,
+    icon: <Zap size={24} color="#FFF" />,
+    color: '#FF6B4A',
     description: 'High-intensity functional movements',
   },
   {
-    id: 'gym',
+    id: 'GYM',
+    dbKey: 'GYM',
     label: 'Gym',
-    icon: <Dumbbell size={28} color={colors.surface} />,
-    color: colors.primary,
+    icon: <Dumbbell size={24} color="#FFF" />,
+    color: liquidGlass.accent.primary,
     description: 'Traditional strength training',
   },
   {
-    id: 'cardio',
+    id: 'CARDIO',
+    dbKey: 'CARDIO',
     label: 'Cardio',
-    icon: <Heart size={28} color={colors.surface} />,
+    icon: <Heart size={24} color="#FFF" />,
     color: '#FF6B9D',
     description: 'Endurance and conditioning',
   },
   {
-    id: 'bodyweight',
+    id: 'BODYWEIGHT',
+    dbKey: 'BODYWEIGHT',
     label: 'Bodyweight',
-    icon: <User size={28} color={colors.surface} />,
+    icon: <User size={24} color="#FFF" />,
     color: '#9B7EFF',
     description: 'No equipment needed',
   },
 ];
 
-const MUSCLE_GROUPS: MuscleGroupOption[] = [
-  { id: 'chest', label: 'Chest', description: 'Pectorals & upper body push' },
-  { id: 'back', label: 'Back', description: 'Lats, traps & rhomboids' },
-  { id: 'shoulders', label: 'Shoulders', description: 'Deltoids & rotator cuff' },
-  { id: 'arms', label: 'Arms', description: 'Biceps, triceps & forearms' },
-  { id: 'legs', label: 'Legs', description: 'Quads, hamstrings & calves' },
-  { id: 'core', label: 'Core', description: 'Abs & obliques' },
-  { id: 'glutes', label: 'Glutes', description: 'Glutes & hips' },
-  { id: 'calves', label: 'Calves', description: 'Lower leg muscles' },
-];
+function GlassCard({ children, style, onPress }: { children: React.ReactNode; style?: any; onPress?: () => void }) {
+  const content = (
+    <View style={[styles.glassCard, style]}>
+      {children}
+    </View>
+  );
+  
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
+}
 
 export default function PlanScreen() {
-  const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory>(null);
-  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<MuscleGroup>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>(null);
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null);
+  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
 
-  const handleCategorySelect = useCallback((category: WorkoutCategory) => {
+  const filteredExercises = useMemo(() => {
+    if (!selectedCategory) return [];
+    const category = WORKOUT_CATEGORIES.find(c => c.id === selectedCategory);
+    if (!category) return [];
+    return EXERCISE_LIBRARY.filter(ex => ex.category === category.dbKey);
+  }, [selectedCategory]);
+
+  const uniqueMuscleGroups = useMemo(() => {
+    const groups = [...new Set(filteredExercises.map(ex => ex.muscleGroup))];
+    return groups.sort();
+  }, [filteredExercises]);
+
+  const exercisesForMuscleGroup = useMemo(() => {
+    if (!selectedMuscleGroup) return [];
+    return filteredExercises.filter(ex => ex.muscleGroup === selectedMuscleGroup);
+  }, [filteredExercises, selectedMuscleGroup]);
+
+  const handleCategorySelect = useCallback((category: CategoryKey) => {
     haptics.medium();
     setSelectedCategory(category);
     setSelectedMuscleGroup(null);
   }, []);
 
-  const handleMuscleGroupSelect = useCallback((muscleGroup: MuscleGroup) => {
+  const handleMuscleGroupSelect = useCallback((muscleGroup: string) => {
     haptics.light();
     setSelectedMuscleGroup(muscleGroup);
   }, []);
@@ -98,8 +127,45 @@ export default function PlanScreen() {
       setSelectedMuscleGroup(null);
     } else if (selectedCategory) {
       setSelectedCategory(null);
+      setSelectedExercises([]);
     }
   }, [selectedCategory, selectedMuscleGroup]);
+
+  const convertToExercise = useCallback((entry: ExerciseEntry): Exercise => {
+    return {
+      id: entry.id,
+      name: entry.name,
+      sets: 3,
+      reps: entry.difficulty === 'Beginner' ? '10-12' : entry.difficulty === 'Intermediate' ? '8-10' : '6-8',
+      rest: entry.difficulty === 'Advanced' ? 120 : 90,
+      kneeSafeLevel: 'safe',
+      notes: `${entry.muscleGroup} exercise. Equipment: ${entry.equipment.length > 0 ? entry.equipment.join(', ') : 'None'}`,
+    };
+  }, []);
+
+  const toggleExercise = useCallback((entry: ExerciseEntry) => {
+    haptics.light();
+    setSelectedExercises(prev => {
+      const exists = prev.find(e => e.id === entry.id);
+      if (exists) {
+        return prev.filter(e => e.id !== entry.id);
+      }
+      return [...prev, convertToExercise(entry)];
+    });
+  }, [convertToExercise]);
+
+  const isExerciseSelected = useCallback((id: string) => {
+    return selectedExercises.some(e => e.id === id);
+  }, [selectedExercises]);
+
+  const handleStartWorkout = useCallback(() => {
+    if (selectedExercises.length === 0) {
+      Alert.alert('No Exercises', 'Please select at least one exercise to start.');
+      return;
+    }
+    haptics.medium();
+    router.push('/programs/builder');
+  }, [selectedExercises]);
 
   const renderCategorySelection = () => (
     <View style={styles.categoriesContainer}>
@@ -110,11 +176,10 @@ export default function PlanScreen() {
       
       <View style={styles.categoryGrid}>
         {WORKOUT_CATEGORIES.map((category) => (
-          <TouchableOpacity
+          <GlassCard
             key={category.id}
             style={styles.categoryCard}
             onPress={() => handleCategorySelect(category.id)}
-            activeOpacity={0.7}
           >
             <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
               {category.icon}
@@ -123,8 +188,8 @@ export default function PlanScreen() {
               <Text style={styles.categoryLabel}>{category.label}</Text>
               <Text style={styles.categoryDescription}>{category.description}</Text>
             </View>
-            <ChevronRight size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
+            <ChevronRight size={20} color={liquidGlass.text.tertiary} />
+          </GlassCard>
         ))}
       </View>
     </View>
@@ -140,41 +205,40 @@ export default function PlanScreen() {
           onPress={handleBack}
           activeOpacity={0.7}
         >
-          <ChevronRight 
-            size={20} 
-            color={colors.primary} 
-            style={{ transform: [{ rotate: '180deg' }] }}
-          />
+          <ChevronLeft size={20} color={liquidGlass.accent.primary} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
 
-        <View style={[styles.categoryBadge, { backgroundColor: category?.color + '15' }]}>
+        <View style={[styles.categoryBadge, { backgroundColor: category?.color + '20' }]}>
           <View style={[styles.categoryBadgeIcon, { backgroundColor: category?.color }]}>
             {category?.icon}
           </View>
           <Text style={styles.categoryBadgeText}>{category?.label}</Text>
+          <Text style={styles.categoryBadgeCount}>{filteredExercises.length} exercises</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Select Muscle Group</Text>
         <Text style={styles.sectionSubtitle}>
-          Choose the target muscle group for your workout
+          {uniqueMuscleGroups.length} muscle groups available
         </Text>
 
         <View style={styles.muscleGroupList}>
-          {MUSCLE_GROUPS.map((muscle) => (
-            <TouchableOpacity
-              key={muscle.id}
-              style={styles.muscleGroupCard}
-              onPress={() => handleMuscleGroupSelect(muscle.id)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.muscleGroupContent}>
-                <Text style={styles.muscleGroupLabel}>{muscle.label}</Text>
-                <Text style={styles.muscleGroupDescription}>{muscle.description}</Text>
-              </View>
-              <ChevronRight size={20} color={colors.textTertiary} />
-            </TouchableOpacity>
-          ))}
+          {uniqueMuscleGroups.map((muscleGroup) => {
+            const count = filteredExercises.filter(ex => ex.muscleGroup === muscleGroup).length;
+            return (
+              <GlassCard
+                key={muscleGroup}
+                style={styles.muscleGroupCard}
+                onPress={() => handleMuscleGroupSelect(muscleGroup)}
+              >
+                <View style={styles.muscleGroupContent}>
+                  <Text style={styles.muscleGroupLabel}>{muscleGroup}</Text>
+                  <Text style={styles.muscleGroupDescription}>{count} exercises</Text>
+                </View>
+                <ChevronRight size={20} color={liquidGlass.text.tertiary} />
+              </GlassCard>
+            );
+          })}
         </View>
       </View>
     );
@@ -182,7 +246,6 @@ export default function PlanScreen() {
 
   const renderWorkoutList = () => {
     const category = WORKOUT_CATEGORIES.find(c => c.id === selectedCategory);
-    const muscleGroup = MUSCLE_GROUPS.find(m => m.id === selectedMuscleGroup);
 
     return (
       <View style={styles.workoutListContainer}>
@@ -191,39 +254,72 @@ export default function PlanScreen() {
           onPress={handleBack}
           activeOpacity={0.7}
         >
-          <ChevronRight 
-            size={20} 
-            color={colors.primary} 
-            style={{ transform: [{ rotate: '180deg' }] }}
-          />
+          <ChevronLeft size={20} color={liquidGlass.accent.primary} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
 
         <View style={styles.breadcrumbs}>
-          <View style={[styles.breadcrumbBadge, { backgroundColor: category?.color + '15' }]}>
+          <View style={[styles.breadcrumbBadge, { backgroundColor: category?.color + '20' }]}>
             <Text style={[styles.breadcrumbText, { color: category?.color }]}>{category?.label}</Text>
           </View>
-          <ChevronRight size={14} color={colors.textTertiary} />
+          <ChevronRight size={14} color={liquidGlass.text.tertiary} />
           <View style={styles.breadcrumbBadge}>
-            <Text style={styles.breadcrumbText}>{muscleGroup?.label}</Text>
+            <Text style={styles.breadcrumbText}>{selectedMuscleGroup}</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>{muscleGroup?.label} Workouts</Text>
+        <Text style={styles.sectionTitle}>{selectedMuscleGroup}</Text>
         <Text style={styles.sectionSubtitle}>
-          {category?.label} exercises targeting {muscleGroup?.label.toLowerCase()}
+          {exercisesForMuscleGroup.length} exercises available · Tap to select
         </Text>
 
-        <Card style={styles.placeholderCard}>
-          <View style={styles.placeholderIcon}>
-            <Dumbbell size={48} color={colors.textTertiary} />
+        <View style={styles.exerciseList}>
+          {exercisesForMuscleGroup.map((exercise) => {
+            const isSelected = isExerciseSelected(exercise.id);
+            const difficultyColor = exercise.difficulty === 'Beginner' ? '#22C55E' : exercise.difficulty === 'Intermediate' ? '#EAB308' : '#EF4444';
+            
+            return (
+              <TouchableOpacity
+                key={exercise.id}
+                style={[styles.exerciseCard, isSelected && styles.exerciseCardSelected]}
+                onPress={() => toggleExercise(exercise)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.exerciseContent}>
+                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                  <Text style={styles.exerciseMeta}>
+                    {exercise.equipment.length > 0 ? exercise.equipment.slice(0, 2).join(', ') : 'No equipment'}
+                  </Text>
+                </View>
+                <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor + '20' }]}>
+                  <Text style={[styles.difficultyText, { color: difficultyColor }]}>{exercise.difficulty}</Text>
+                </View>
+                <View style={[styles.selectButton, isSelected && styles.selectButtonActive]}>
+                  {isSelected ? (
+                    <Check size={18} color="#FFF" />
+                  ) : (
+                    <Plus size={18} color={liquidGlass.accent.primary} />
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {selectedExercises.length > 0 && (
+          <View style={styles.floatingAction}>
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleStartWorkout}
+              activeOpacity={0.9}
+            >
+              <Play size={20} color="#FFF" fill="#FFF" />
+              <Text style={styles.startButtonText}>
+                Build Workout ({selectedExercises.length})
+              </Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.placeholderTitle}>Workouts Coming Soon</Text>
-          <Text style={styles.placeholderText}>
-            Workout exercises for this muscle group will be added soon. 
-            You can provide the workout data later.
-          </Text>
-        </Card>
+        )}
       </View>
     );
   };
@@ -235,10 +331,10 @@ export default function PlanScreen() {
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
-        <PageHeader 
-          title="Plan Your Workout" 
-          subtitle="Build your personalized training program" 
-        />
+        <View style={styles.header}>
+          <Text style={styles.title}>Plan Your Workout</Text>
+          <Text style={styles.subtitle}>Build your personalized training program</Text>
+        </View>
 
         {!selectedCategory && renderCategorySelection()}
         {selectedCategory && !selectedMuscleGroup && renderMuscleGroupSelection()}
@@ -253,48 +349,65 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: colors.background,
+    backgroundColor: liquidGlass.background.primary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: { 
-    padding: layout.screenPadding, 
-    paddingTop: layout.screenPaddingTop,
+    padding: glassLayout.screenPadding, 
+    paddingTop: glassLayout.screenPaddingTop,
+  },
+  header: {
+    marginBottom: 28,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
+    letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: liquidGlass.text.secondary,
+  },
+  glassCard: {
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    padding: 18,
+    ...glassShadows.soft,
   },
   categoriesContainer: {
     marginTop: 8,
   },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: '800' as const,
-    color: colors.text,
+    fontSize: 22,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
     marginBottom: 8,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   sectionSubtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginBottom: 28,
-    lineHeight: 24,
-    fontWeight: '500' as const,
+    fontSize: 15,
+    color: liquidGlass.text.secondary,
+    marginBottom: 24,
+    lineHeight: 22,
   },
   categoryGrid: {
-    gap: 16,
+    gap: 14,
   },
   categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xxl,
-    padding: 20,
     gap: 16,
-    ...shadows.medium,
   },
   categoryIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -302,16 +415,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoryLabel: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700' as const,
-    color: colors.text,
-    marginBottom: 4,
-    letterSpacing: -0.2,
+    color: liquidGlass.text.primary,
+    marginBottom: 3,
   },
   categoryDescription: {
     fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500' as const,
+    color: liquidGlass.text.tertiary,
   },
   muscleGroupsContainer: {
     marginTop: 8,
@@ -326,32 +437,32 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: colors.primary,
-    letterSpacing: -0.1,
+    color: liquidGlass.accent.primary,
   },
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     alignSelf: 'flex-start',
-    paddingRight: 20,
+    paddingRight: 18,
     paddingVertical: 8,
     paddingLeft: 8,
-    borderRadius: borderRadius.full,
+    borderRadius: 50,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
   },
   categoryBadgeIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   categoryBadgeText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700' as const,
-    color: colors.text,
-    letterSpacing: -0.2,
+    color: liquidGlass.text.primary,
   },
   muscleGroupList: {
     gap: 12,
@@ -359,26 +470,20 @@ const styles = StyleSheet.create({
   muscleGroupCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: 18,
     gap: 12,
-    ...shadows.soft,
   },
   muscleGroupContent: {
     flex: 1,
   },
   muscleGroupLabel: {
     fontSize: 17,
-    fontWeight: '700' as const,
-    color: colors.text,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.primary,
     marginBottom: 3,
-    letterSpacing: -0.2,
   },
   muscleGroupDescription: {
     fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500' as const,
+    color: liquidGlass.text.tertiary,
   },
   workoutListContainer: {
     marginTop: 8,
@@ -392,45 +497,94 @@ const styles = StyleSheet.create({
   breadcrumbBadge: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceDim,
+    borderRadius: 50,
+    backgroundColor: liquidGlass.surface.glass,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
   },
   breadcrumbText: {
     fontSize: 13,
     fontWeight: '600' as const,
-    color: colors.text,
-    letterSpacing: 0.1,
+    color: liquidGlass.text.primary,
   },
-  placeholderCard: {
+  categoryBadgeCount: {
+    fontSize: 13,
+    color: liquidGlass.text.tertiary,
+    marginLeft: 8,
+  },
+  exerciseList: {
+    gap: 10,
+  },
+  exerciseCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 24,
+    padding: 16,
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    gap: 12,
   },
-  placeholderIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.surfaceDim,
+  exerciseCardSelected: {
+    borderColor: liquidGlass.accent.primary,
+    backgroundColor: liquidGlass.accent.primary + '10',
+  },
+  exerciseContent: {
+    flex: 1,
+  },
+  exerciseName: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.primary,
+    marginBottom: 4,
+  },
+  exerciseMeta: {
+    fontSize: 13,
+    color: liquidGlass.text.tertiary,
+  },
+  difficultyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  difficultyText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+  },
+  selectButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: liquidGlass.surface.glassDark,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
   },
-  placeholderTitle: {
-    fontSize: 20,
+  selectButtonActive: {
+    backgroundColor: liquidGlass.accent.primary,
+    borderColor: liquidGlass.accent.primary,
+  },
+  floatingAction: {
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: liquidGlass.accent.primary,
+    paddingVertical: 16,
+    borderRadius: 50,
+    ...glassShadows.glow,
+  },
+  startButtonText: {
+    fontSize: 17,
     fontWeight: '700' as const,
-    color: colors.text,
-    marginBottom: 10,
-    letterSpacing: -0.2,
-  },
-  placeholderText: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    fontWeight: '500' as const,
-    maxWidth: 300,
+    color: '#FFF',
   },
   bottomSpacer: { 
-    height: layout.tabBarHeight,
+    height: glassLayout.tabBarHeight,
   },
 });

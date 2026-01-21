@@ -12,6 +12,29 @@ export type InjuryType =
   | 'general_pain' 
   | 'post_surgery';
 
+export type KneeInjuryType = 
+  | 'ACL_REHAB' 
+  | 'PATELLAR_TENDONITIS' 
+  | 'MENISCUS_TEAR' 
+  | 'RUNNERS_KNEE' 
+  | 'GENERAL_PAIN' 
+  | 'POST_SURGERY';
+
+export type ImpactLevel = 'NONE' | 'LOW' | 'HIGH';
+
+export type RecoveryCategory = 'REHAB' | 'WARMUP' | 'COOLDOWN' | 'MOBILITY';
+
+export type WorkoutSessionType = 'STRENGTH' | 'RECOVERY' | 'PHYSIO' | 'CARDIO';
+
+export interface InjuryProfile {
+  type: KneeInjuryType;
+  painLevel: number; // 1-10
+  contraindications: string[]; // e.g. ['impact', 'deep_flexion', 'lateral_movement']
+  active: boolean;
+  notes?: string;
+  diagnosedDate?: string;
+}
+
 export type PainTolerance = 'low' | 'medium' | 'high';
 
 export type TrainingStyle = 'gym' | 'sport' | 'general';
@@ -56,6 +79,11 @@ export interface UserProfile {
   sportType?: SportType;
   weeklyFrequency: number;
   onboardingCompleted: boolean;
+  
+  // Recovery Baselines (for Analysis Agent)
+  baselineSleep?: number; // hours, e.g., 7.5
+  baselineHrv?: number;   // ms, e.g., 50
+  goal?: 'HYPERTROPHY' | 'STRENGTH' | 'ENDURANCE' | 'GENERAL';
   
   // Body & Lifestyle
   gender?: GenderIdentity;
@@ -246,11 +274,44 @@ export interface SetLog {
   reps?: number;
   completed: boolean;
   timestamp?: string;
+  rpe?: number;
 }
 
 export interface ExerciseLog {
   exerciseId: string;
+  exerciseName?: string;
   sets: SetLog[];
+  notes?: string;
+}
+
+export interface WorkoutSession {
+  id: string;
+  date: string;
+  durationMinutes: number;
+  totalVolume: number;
+  perceivedStrain: number;
+  exercises: ExerciseLog[];
+  sleepHoursPrior?: number;
+  stressLevel?: 'Low' | 'Medium' | 'High';
+  completedAt?: string;
+  sessionType?: WorkoutSessionType;
+}
+
+export interface RecoveryExercise {
+  id: string;
+  name: string;
+  category: RecoveryCategory;
+  muscleGroup: MuscleGroup | 'full_body' | 'lower_body' | 'upper_body';
+  duration: number; // seconds
+  sets?: number;
+  reps?: string;
+  impactLevel: ImpactLevel;
+  tags: string[]; // e.g. ['safe_for_acl', 'vmo_focus', 'isometric']
+  instructions: string;
+  contraindications: string[]; // conditions that make this exercise unsuitable
+  equipmentNeeded: EquipmentType[];
+  videoUrl?: string;
+  alternatives?: string[]; // IDs of alternative exercises
 }
 
 export interface Exercise {
@@ -362,8 +423,21 @@ export interface FoodEntry {
   protein?: number;
   carbs?: number;
   fats?: number;
+  fiber?: number;
+  sugar?: number;
   tags?: string[]; // 'iron', 'calcium', 'fiber', etc.
   timestamp: string;
+  inflammationScore?: number; // -2 (anti-inflammatory) to +2 (pro-inflammatory)
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'pre_workout' | 'post_workout';
+}
+
+export type WorkoutIntensityDay = 'rest' | 'light' | 'moderate' | 'high' | 'intense';
+
+export interface MacroTargets {
+  protein: number;
+  carbs: number;
+  fats: number;
+  calories: number;
 }
 
 export interface NutritionLog {
@@ -665,4 +739,64 @@ export interface ReePresenceSettings {
   showRecoveryHints: boolean;
   showProgressInsights: boolean;
   autoMinimizeAfterSeconds: number;
+}
+
+// ============ ROUTINE ENGINE TYPES ============
+
+export type RoutineType = 'PERFORMANCE_RECOVERY' | 'INJURY_REHAB' | 'CUSTOM';
+
+export interface RoutineItem {
+  exerciseId: string;
+  targetDuration?: number; // seconds (for physio/mobility)
+  targetReps?: number;     // (for strength)
+  targetSets?: number;
+  notes?: string;
+  order: number;
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  type: RoutineType;
+  description: string; // The "Why" (Science explanation)
+  items: RoutineItem[];
+  tags: string[]; // e.g., ['knee_friendly', 'post_leg_day', 'cns_reset']
+  estimatedDuration: number; // minutes
+  targetInjuries?: KneeInjuryType[]; // Which injuries this routine is designed for
+  contraindications?: string[]; // Conditions that make this routine unsuitable
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  createdAt?: string;
+  createdBy?: 'system' | 'user';
+}
+
+export interface RoutineValidationResult {
+  safe: boolean;
+  overallRisk: 'low' | 'moderate' | 'high';
+  warnings: RoutineWarning[];
+  safeItems: string[];
+  unsafeItems: string[];
+  suggestedAlternatives: Record<string, string[]>;
+}
+
+export interface RoutineWarning {
+  exerciseId: string;
+  exerciseName: string;
+  severity: 'caution' | 'warning' | 'danger';
+  message: string;
+  biomechanicalReason: string;
+}
+
+// ============ RECOVERY SESSION TYPES ============
+
+export interface RecoverySession {
+  id: string;
+  date: string;
+  routineId: string;
+  routineName: string;
+  durationMinutes: number;
+  painLevelBefore: number;
+  painLevelAfter: number;
+  completedSteps: number;
+  totalSteps: number;
+  completedAt: string;
 }

@@ -2,7 +2,7 @@ import { Tabs, useSegments } from "expo-router";
 import { Home, Calendar, Activity, TrendingUp } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
-import colors from "@/constants/colors";
+import { liquidGlass } from "@/constants/liquidGlass";
 
 import { ReeFloatingButton } from "@/components/ReeFloatingButton";
 import { AppTutorial, isTutorialCompleted } from "@/components/AppTutorial";
@@ -47,7 +47,7 @@ export default function TabLayout() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: liquidGlass.background.primary }}>
       
       <Tabs
         screenOptions={{

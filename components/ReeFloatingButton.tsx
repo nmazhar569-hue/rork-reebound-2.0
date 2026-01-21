@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useMemo, memo } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
-import { router } from 'expo-router';
 import { liquidGlass, glassShadows } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
 import { useRee } from '@/contexts/ReeContext';
@@ -18,8 +17,8 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BUTTON_SIZE = 64;
 const EDGE_PADDING = 16;
 
-const ReeFloatingButtonComponent = () => {
-  const { hasUnseenInsight, expandRee } = useRee();
+export function ReeFloatingButton() {
+  const { hasUnseenInsight } = useRee();
   
   // Use persistent refs for animation values to prevent recreation
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -28,18 +27,13 @@ const ReeFloatingButtonComponent = () => {
   const positionX = useRef(new Animated.Value(SCREEN_WIDTH - BUTTON_SIZE - EDGE_PADDING)).current;
   const positionY = useRef(new Animated.Value(SCREEN_HEIGHT - 200)).current;
   
-  // Drag state management
   const isDragging = useRef(false);
   const hasMoved = useRef(false);
   const dragStartPosition = useRef({ x: 0, y: 0 });
-  const lastTap = useRef(0);
-  const DRAG_THRESHOLD = 10; // Increased threshold for better stability
-  const DOUBLE_TAP_DELAY = 300;
+  const DRAG_THRESHOLD = 5;
 
-  // Memoized animation setup to prevent recreation on every render
   useEffect(() => {
-    // Glow animation
-    const glowAnimation = Animated.loop(
+    Animated.loop(
       Animated.sequence([
         Animated.timing(glowAnim, {
           toValue: 1,
@@ -52,10 +46,9 @@ const ReeFloatingButtonComponent = () => {
           useNativeDriver: true,
         }),
       ])
-    );
+    ).start();
 
-    // Pulse animation
-    const pulseAnimation = Animated.loop(
+    Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.08,
@@ -68,16 +61,8 @@ const ReeFloatingButtonComponent = () => {
           useNativeDriver: true,
         }),
       ])
-    );
-
-    glowAnimation.start();
-    pulseAnimation.start();
-
-    return () => {
-      glowAnimation.stop();
-      pulseAnimation.stop();
-    };
-  }, []); // Empty dependency array - only run once
+    ).start();
+  }, [glowAnim, pulseAnim]);
 
   const snapToNearestSide = useCallback((currentX: number, currentY: number) => {
     const maxY = SCREEN_HEIGHT - BUTTON_SIZE - 120;
@@ -90,133 +75,68 @@ const ReeFloatingButtonComponent = () => {
     Animated.parallel([
       Animated.spring(positionX, {
         toValue: targetX,
-        tension: 120,
-        friction: 10,
+        tension: 150,
+        friction: 12,
         useNativeDriver: false,
       }),
       Animated.spring(positionY, {
         toValue: constrainedY,
-        tension: 120,
-        friction: 10,
+        tension: 150,
+        friction: 12,
         useNativeDriver: false,
       }),
     ]).start();
     
     haptics.light();
-  }, []);
+  }, [positionX, positionY]);
 
-  // Handle button tap/press
-  const handlePress = useCallback(() => {
-    if (isDragging.current || hasMoved.current) {
-      return;
-    }
-
-    const now = Date.now();
-    const timeSinceLastTap = now - lastTap.current;
-    
-    if (timeSinceLastTap < DOUBLE_TAP_DELAY && timeSinceLastTap > 0) {
-      // Double tap - navigate to AI chat
-      haptics.medium();
-      router.push('/ai-chat');
-    } else {
-      // Single tap - expand Ree
-      haptics.light();
-      expandRee();
-    }
-    
-    lastTap.current = now;
-  }, [expandRee]);
-
-  // Optimized PanResponder with better touch handling
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onStartShouldSetPanResponderCapture: () => false,
-        onMoveShouldSetPanResponder: (_, gestureState) => {
-          const moved = Math.abs(gestureState.dx) > DRAG_THRESHOLD || 
-                       Math.abs(gestureState.dy) > DRAG_THRESHOLD;
-          return moved;
-        },
-        onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-          const moved = Math.abs(gestureState.dx) > DRAG_THRESHOLD || 
-                       Math.abs(gestureState.dy) > DRAG_THRESHOLD;
-          return moved;
-        },
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > DRAG_THRESHOLD || Math.abs(gestureState.dy) > DRAG_THRESHOLD;
+      },
+      
+      onPanResponderGrant: (evt) => {
+        dragStartPosition.current = {
+          x: evt.nativeEvent.pageX,
+          y: evt.nativeEvent.pageY,
+        };
+        isDragging.current = false;
         
-        onPanResponderGrant: (evt) => {
-          dragStartPosition.current = {
-            x: evt.nativeEvent.pageX,
-            y: evt.nativeEvent.pageY,
-          };
-          isDragging.current = false;
-          hasMoved.current = false;
-          
-          Animated.spring(scaleAnim, {
-            toValue: 0.92,
-            tension: 300,
-            friction: 10,
-            useNativeDriver: true,
-          }).start();
-        },
+        Animated.spring(scaleAnim, {
+          toValue: 0.92,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }).start();
+      },
+      
+      onPanResponderMove: (evt, gestureState) => {
+        const deltaX = Math.abs(evt.nativeEvent.pageX - dragStartPosition.current.x);
+        const deltaY = Math.abs(evt.nativeEvent.pageY - dragStartPosition.current.y);
         
-        onPanResponderMove: (evt, gestureState) => {
-          const deltaX = Math.abs(evt.nativeEvent.pageX - dragStartPosition.current.x);
-          const deltaY = Math.abs(evt.nativeEvent.pageY - dragStartPosition.current.y);
+        if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
+          isDragging.current = true;
           
-          if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
-            if (!isDragging.current) {
-              isDragging.current = true;
-              hasMoved.current = true;
-            }
-            
-            const newX = Math.max(
-              EDGE_PADDING, 
-              Math.min(
-                SCREEN_WIDTH - BUTTON_SIZE - EDGE_PADDING, 
-                gestureState.moveX - BUTTON_SIZE / 2
-              )
-            );
-            const newY = Math.max(
-              80, 
-              Math.min(
-                SCREEN_HEIGHT - BUTTON_SIZE - 120, 
-                gestureState.moveY - BUTTON_SIZE / 2
-              )
-            );
-            
-            positionX.setValue(newX);
-            positionY.setValue(newY);
-          }
-        },
+          const newX = Math.max(EDGE_PADDING, Math.min(SCREEN_WIDTH - BUTTON_SIZE - EDGE_PADDING, gestureState.moveX - BUTTON_SIZE / 2));
+          const newY = Math.max(80, Math.min(SCREEN_HEIGHT - BUTTON_SIZE - 120, gestureState.moveY - BUTTON_SIZE / 2));
+          
+          positionX.setValue(newX);
+          positionY.setValue(newY);
+        }
+      },
+      
+      onPanResponderRelease: () => {
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }).start();
         
-        onPanResponderRelease: (_, gestureState) => {
-          Animated.spring(scaleAnim, {
-            toValue: 1,
-            tension: 300,
-            friction: 10,
-            useNativeDriver: true,
-          }).start();
-          
-          if (hasMoved.current) {
-            const currentX = (positionX as any)._value;
-            const currentY = (positionY as any)._value;
-            snapToNearestSide(currentX, currentY);
-            
-            // Reset drag state after animation
-            setTimeout(() => {
-              isDragging.current = false;
-              hasMoved.current = false;
-            }, 100);
-          } else {
-            // It was a tap, not a drag
-            setTimeout(() => {
-              isDragging.current = false;
-              hasMoved.current = false;
-              handlePress();
-            }, 50);
-          }
-        },
+        const currentX = (positionX as any)._value;
+        const currentY = (positionY as any)._value;
+        snapToNearestSide(currentX, currentY);
         
         onPanResponderTerminate: () => {
           Animated.spring(scaleAnim, {
@@ -227,11 +147,10 @@ const ReeFloatingButtonComponent = () => {
           }).start();
           
           isDragging.current = false;
-          hasMoved.current = false;
-        },
-      }),
-    [handlePress, snapToNearestSide]
-  );
+        }, 50);
+      },
+    })
+  ).current;
 
   return (
     <Animated.View
