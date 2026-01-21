@@ -241,7 +241,7 @@ export function ReeFloatingButton() {
     haptics.medium();
     setCurrentMode(option.mode);
     closeNavMenu();
-    router.push(option.route as `/${string}`);
+    router.push(option.route as any);
   }, [router, setCurrentMode, closeNavMenu]);
 
   const navigationOptions: NavigationOption[] = [
