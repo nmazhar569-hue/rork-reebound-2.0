@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,16 +13,15 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { Lightbulb, HelpCircle, BarChart3, Dumbbell, Heart, TrendingUp, Apple, Users } from 'lucide-react-native';
-import colors from '@/constants/colors';
-import { modeColors, glass, glassRadius, glassShadows, neutralColors } from '@/constants/modeColors';
+import { Lightbulb, HelpCircle, BarChart3, Dumbbell, Heart, TrendingUp, Apple, Home } from 'lucide-react-native';
+import { modeColors, glassRadius, glassShadows, neutralColors } from '@/constants/modeColors';
 import { haptics } from '@/utils/haptics';
 import { useRee } from '@/contexts/ReeContext';
 import { useAppMode } from '@/contexts/AppModeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BUTTON_SIZE = 56;
-const HOLD_DURATION = 500; // ms to hold before showing menu
+const DOUBLE_TAP_DELAY = 300; // ms between taps for double tap
 
 interface NavigationOption {
   id: string;
@@ -42,7 +41,7 @@ interface AIOption {
 export function ReeFloatingButton() {
   const router = useRouter();
   const { currentInsight, hasUnseenInsight } = useRee();
-  const { currentMode, setCurrentMode, theme } = useAppMode();
+  const { setCurrentMode, theme } = useAppMode();
   
   const [showAIMenu, setShowAIMenu] = useState(false);
   const [showNavMenu, setShowNavMenu] = useState(false);
@@ -53,15 +52,20 @@ export function ReeFloatingButton() {
   const positionX = useRef(new Animated.Value(SCREEN_WIDTH - BUTTON_SIZE - 20)).current;
   const positionY = useRef(new Animated.Value(SCREEN_HEIGHT - 180)).current;
   
-  const holdTimer = useRef<NodeJS.Timeout | null>(null);
   const isDragging = useRef(false);
+  const isHolding = useRef(false);
   const dragStartPosition = useRef({ x: 0, y: 0 });
-  const DRAG_THRESHOLD = 8;
+  const lastTapTime = useRef(0);
+  const tapCount = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const DRAG_THRESHOLD = 5;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => isDragging.current,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > DRAG_THRESHOLD || Math.abs(gestureState.dy) > DRAG_THRESHOLD;
+      },
       
       onPanResponderGrant: (evt) => {
         dragStartPosition.current = {
@@ -69,14 +73,7 @@ export function ReeFloatingButton() {
           y: evt.nativeEvent.pageY,
         };
         isDragging.current = false;
-        
-        // Start hold timer for navigation menu
-        holdTimer.current = setTimeout(() => {
-          if (!isDragging.current) {
-            haptics.medium();
-            openNavMenu();
-          }
-        }, HOLD_DURATION);
+        isHolding.current = true;
         
         // Press animation
         Animated.spring(scaleAnim, {
@@ -93,22 +90,18 @@ export function ReeFloatingButton() {
         
         if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
           isDragging.current = true;
-          if (holdTimer.current) {
-            clearTimeout(holdTimer.current);
-            holdTimer.current = null;
-          }
           
-          // Update position
-          positionX.setValue(gestureState.moveX - BUTTON_SIZE / 2);
-          positionY.setValue(gestureState.moveY - BUTTON_SIZE / 2);
+          // Smooth position update while dragging
+          const newX = Math.max(10, Math.min(SCREEN_WIDTH - BUTTON_SIZE - 10, gestureState.moveX - BUTTON_SIZE / 2));
+          const newY = Math.max(50, Math.min(SCREEN_HEIGHT - BUTTON_SIZE - 90, gestureState.moveY - BUTTON_SIZE / 2));
+          
+          positionX.setValue(newX);
+          positionY.setValue(newY);
         }
       },
       
       onPanResponderRelease: () => {
-        if (holdTimer.current) {
-          clearTimeout(holdTimer.current);
-          holdTimer.current = null;
-        }
+        isHolding.current = false;
         
         Animated.spring(scaleAnim, {
           toValue: 1,
@@ -117,13 +110,37 @@ export function ReeFloatingButton() {
           useNativeDriver: true,
         }).start();
         
-        // If not dragging and no menu is open, show AI menu
-        if (!isDragging.current && !showNavMenu) {
-          haptics.light();
-          openAIMenu();
+        // Handle tap detection
+        if (!isDragging.current && !showNavMenu && !showAIMenu) {
+          const now = Date.now();
+          const timeSinceLastTap = now - lastTapTime.current;
+          
+          if (timeSinceLastTap < DOUBLE_TAP_DELAY && tapCount.current === 1) {
+            // Double tap detected - show nav menu
+            if (tapTimer.current) {
+              clearTimeout(tapTimer.current);
+              tapTimer.current = null;
+            }
+            tapCount.current = 0;
+            haptics.medium();
+            openNavMenu();
+          } else {
+            // First tap - wait to see if it's a double tap
+            tapCount.current = 1;
+            lastTapTime.current = now;
+            
+            tapTimer.current = setTimeout(() => {
+              if (tapCount.current === 1) {
+                // Single tap - show AI menu
+                haptics.light();
+                openAIMenu();
+              }
+              tapCount.current = 0;
+            }, DOUBLE_TAP_DELAY);
+          }
         }
         
-        // Snap to nearest edge
+        // Snap to nearest edge after dragging
         if (isDragging.current) {
           const currentX = (positionX as any)._value;
           const currentY = (positionY as any)._value;
@@ -139,22 +156,22 @@ export function ReeFloatingButton() {
           
           Animated.spring(positionX, {
             toValue: targetX,
-            tension: 100,
-            friction: 10,
+            tension: 120,
+            friction: 12,
             useNativeDriver: false,
           }).start();
           
           Animated.spring(positionY, {
             toValue: constrainedY,
-            tension: 100,
-            friction: 10,
+            tension: 120,
+            friction: 12,
             useNativeDriver: false,
           }).start();
         }
         
         setTimeout(() => {
           isDragging.current = false;
-        }, 100);
+        }, 50);
       },
     })
   ).current;
@@ -224,15 +241,15 @@ export function ReeFloatingButton() {
     haptics.medium();
     setCurrentMode(option.mode);
     closeNavMenu();
-    router.push(option.route);
+    router.push(option.route as any);
   }, [router, setCurrentMode, closeNavMenu]);
 
   const navigationOptions: NavigationOption[] = [
+    { id: 'home', label: 'Home', icon: Home, mode: 'workout', route: '/(tabs)/' },
     { id: 'workout', label: 'Workout Plan', icon: Dumbbell, mode: 'workout', route: '/(tabs)/plan' },
-    { id: 'recovery', label: 'Recovery Plan', icon: Heart, mode: 'recovery', route: '/(tabs)/recovery' },
-    { id: 'progress', label: 'Progress Reports', icon: TrendingUp, mode: 'progress', route: '/(tabs)/progress' },
+    { id: 'recovery', label: 'Recovery', icon: Heart, mode: 'recovery', route: '/(tabs)/recovery' },
+    { id: 'progress', label: 'Progress', icon: TrendingUp, mode: 'progress', route: '/(tabs)/progress' },
     { id: 'nutrition', label: 'Nutrition', icon: Apple, mode: 'nutrition', route: '/(tabs)/nutrition' },
-    { id: 'community', label: 'Limbrise Community', icon: Users, mode: 'ai', route: '/(tabs)/' },
   ];
 
   const aiOptions: AIOption[] = [
@@ -479,7 +496,7 @@ const styles = StyleSheet.create({
     top: '50%',
     left: '50%',
     marginLeft: -140,
-    marginTop: -180,
+    marginTop: -160,
     width: 280,
     zIndex: 99,
     borderRadius: glassRadius.large,
