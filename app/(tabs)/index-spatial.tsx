@@ -310,9 +310,9 @@ export default function HomeScreen() {
               }}
               style={styles.recoveryCard}
             >
-              <Text style={styles.recoveryTitle}>{exercise.name}</Text>
-              <Text style={styles.recoverySubtitle}>{exercise.duration}</Text>
-              <Text style={styles.recoveryDescription}>{exercise.description}</Text>
+              <Text style={styles.recoveryTitle}>{exercise.title}</Text>
+              <Text style={styles.recoverySubtitle}>{exercise.duration} min</Text>
+              <Text style={styles.recoveryDescription}>{exercise.type}</Text>
             </SpatialGlassCard>
           ))}
         </View>
@@ -330,7 +330,7 @@ export default function HomeScreen() {
         {todayWorkout && (
           <SpatialGlassCard layer="control" mode="workout" style={styles.workoutCard}>
             <Text style={styles.workoutTitle}>Today's Workout</Text>
-            <Text style={styles.workoutName}>{todayWorkout.name}</Text>
+            <Text style={styles.workoutName}>{todayWorkout.title}</Text>
             <SpatialGlassCard 
               layer="elevated" 
               interactive 

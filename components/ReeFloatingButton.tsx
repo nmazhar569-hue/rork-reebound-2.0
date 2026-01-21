@@ -57,7 +57,7 @@ export function ReeFloatingButton() {
   const dragStartPosition = useRef({ x: 0, y: 0 });
   const lastTapTime = useRef(0);
   const tapCount = useRef(0);
-  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tapTimer = useRef<NodeJS.Timeout | number | null>(null);
   const DRAG_THRESHOLD = 5;
 
   const panResponder = useRef(
@@ -241,7 +241,7 @@ export function ReeFloatingButton() {
     haptics.medium();
     setCurrentMode(option.mode);
     closeNavMenu();
-    router.push(option.route as any);
+    router.push(option.route as `/${string}`);
   }, [router, setCurrentMode, closeNavMenu]);
 
   const navigationOptions: NavigationOption[] = [
