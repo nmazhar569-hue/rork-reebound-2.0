@@ -29,7 +29,7 @@ interface BodyDiagramProps {
 interface MuscleRegion {
   id: MuscleGroupId;
   name: string;
-  path: string;
+  path?: string;
   cx?: number;
   cy?: number;
   r?: number;
