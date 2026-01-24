@@ -8,8 +8,9 @@ import {
   Platform,
   Pressable,
   PanResponder,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Lightbulb, HelpCircle, BarChart3, Dumbbell, Heart, TrendingUp, Apple, Home } from 'lucide-react-native';
@@ -17,10 +18,6 @@ import { liquidGlass, glassShadows } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
 import { useRee } from '@/contexts/ReeContext';
 import { useAppMode } from '@/contexts/AppModeContext';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BUTTON_SIZE = 56;
-const DOUBLE_TAP_DELAY = 300;
 
 interface NavigationOption {
   id: string;
@@ -41,16 +38,22 @@ export function ReeFloatingButton() {
   const router = useRouter();
   const { currentInsight, hasUnseenInsight } = useRee();
   const { setCurrentMode } = useAppMode();
-  
+
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const BUTTON_SIZE = 56;
+  const DOUBLE_TAP_DELAY = 300;
+
   const [showAIMenu, setShowAIMenu] = useState(false);
   const [showNavMenu, setShowNavMenu] = useState(false);
-  
+
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const aiMenuAnim = useRef(new Animated.Value(0)).current;
   const navMenuAnim = useRef(new Animated.Value(0)).current;
+  // Initialize position safely within bounds
   const positionX = useRef(new Animated.Value(SCREEN_WIDTH - BUTTON_SIZE - 20)).current;
   const positionY = useRef(new Animated.Value(SCREEN_HEIGHT - 180)).current;
-  
+
   const isDragging = useRef(false);
   const isHolding = useRef(false);
   const dragStartPosition = useRef({ x: 0, y: 0 });
@@ -59,13 +62,33 @@ export function ReeFloatingButton() {
   const tapTimer = useRef<NodeJS.Timeout | number | null>(null);
   const DRAG_THRESHOLD = 5;
 
+  // Update position if screen dimensions change (orientation change)
+  // This ensures the button doesn't get lost off-screen
+  React.useEffect(() => {
+    const currentX = (positionX as any)._value;
+    const currentY = (positionY as any)._value;
+
+    // Snap to right edge if it was near the right edge, or keep relative position
+    if (currentX > SCREEN_WIDTH / 2) {
+      positionX.setValue(SCREEN_WIDTH - BUTTON_SIZE - 20);
+    } else {
+      positionX.setValue(20);
+    }
+
+    // Ensure Y is within bounds
+    const maxY = SCREEN_HEIGHT - BUTTON_SIZE - Math.max(100, insets.bottom + 80);
+    if (currentY > maxY) {
+      positionY.setValue(maxY);
+    }
+  }, [SCREEN_WIDTH, SCREEN_HEIGHT, insets.bottom]);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         return Math.abs(gestureState.dx) > DRAG_THRESHOLD || Math.abs(gestureState.dy) > DRAG_THRESHOLD;
       },
-      
+
       onPanResponderGrant: (evt) => {
         dragStartPosition.current = {
           x: evt.nativeEvent.pageX,
@@ -73,7 +96,7 @@ export function ReeFloatingButton() {
         };
         isDragging.current = false;
         isHolding.current = true;
-        
+
         Animated.spring(scaleAnim, {
           toValue: 0.9,
           tension: 300,
@@ -81,36 +104,42 @@ export function ReeFloatingButton() {
           useNativeDriver: true,
         }).start();
       },
-      
+
       onPanResponderMove: (evt, gestureState) => {
         const deltaX = Math.abs(evt.nativeEvent.pageX - dragStartPosition.current.x);
         const deltaY = Math.abs(evt.nativeEvent.pageY - dragStartPosition.current.y);
-        
+
         if (deltaX > DRAG_THRESHOLD || deltaY > DRAG_THRESHOLD) {
           isDragging.current = true;
-          
-          const newX = Math.max(10, Math.min(SCREEN_WIDTH - BUTTON_SIZE - 10, gestureState.moveX - BUTTON_SIZE / 2));
-          const newY = Math.max(50, Math.min(SCREEN_HEIGHT - BUTTON_SIZE - 90, gestureState.moveY - BUTTON_SIZE / 2));
-          
+
+          // Use insets logic for boundaries during drag
+          const minX = insets.left + 10;
+          const maxX = SCREEN_WIDTH - insets.right - BUTTON_SIZE - 10;
+          const minY = insets.top + 50;
+          const maxY = SCREEN_HEIGHT - insets.bottom - BUTTON_SIZE - 80;
+
+          const newX = Math.max(minX, Math.min(maxX, gestureState.moveX - BUTTON_SIZE / 2));
+          const newY = Math.max(minY, Math.min(maxY, gestureState.moveY - BUTTON_SIZE / 2));
+
           positionX.setValue(newX);
           positionY.setValue(newY);
         }
       },
-      
+
       onPanResponderRelease: () => {
         isHolding.current = false;
-        
+
         Animated.spring(scaleAnim, {
           toValue: 1,
           tension: 300,
           friction: 10,
           useNativeDriver: true,
         }).start();
-        
+
         if (!isDragging.current && !showNavMenu && !showAIMenu) {
           const now = Date.now();
           const timeSinceLastTap = now - lastTapTime.current;
-          
+
           if (timeSinceLastTap < DOUBLE_TAP_DELAY && tapCount.current === 1) {
             if (tapTimer.current) {
               clearTimeout(tapTimer.current);
@@ -122,7 +151,7 @@ export function ReeFloatingButton() {
           } else {
             tapCount.current = 1;
             lastTapTime.current = now;
-            
+
             tapTimer.current = setTimeout(() => {
               if (tapCount.current === 1) {
                 haptics.light();
@@ -132,25 +161,25 @@ export function ReeFloatingButton() {
             }, DOUBLE_TAP_DELAY);
           }
         }
-        
+
         if (isDragging.current) {
           const currentX = (positionX as any)._value;
           const currentY = (positionY as any)._value;
-          
-          const maxY = SCREEN_HEIGHT - BUTTON_SIZE - 100;
-          const minY = 60;
+
+          const maxY = SCREEN_HEIGHT - BUTTON_SIZE - Math.max(100, insets.bottom + 80);
+          const minY = insets.top + 60;
           const constrainedY = Math.max(minY, Math.min(maxY, currentY));
-          
+
           const snapToLeft = currentX < SCREEN_WIDTH / 2;
-          const targetX = snapToLeft ? 20 : SCREEN_WIDTH - BUTTON_SIZE - 20;
-          
+          const targetX = snapToLeft ? (insets.left + 20) : (SCREEN_WIDTH - insets.right - BUTTON_SIZE - 20);
+
           Animated.spring(positionX, {
             toValue: targetX,
             tension: 120,
             friction: 12,
             useNativeDriver: false,
           }).start();
-          
+
           Animated.spring(positionY, {
             toValue: constrainedY,
             tension: 120,
@@ -158,7 +187,7 @@ export function ReeFloatingButton() {
             useNativeDriver: false,
           }).start();
         }
-        
+
         setTimeout(() => {
           isDragging.current = false;
         }, 50);
@@ -209,7 +238,7 @@ export function ReeFloatingButton() {
   const handleQuickTip = useCallback(() => {
     haptics.light();
     closeAIMenu();
-    const query = currentInsight 
+    const query = currentInsight
       ? `Give me a quick tip about: ${currentInsight.message}`
       : "Give me a quick wellness tip for today";
     router.push(`/ai-chat?initialQuery=${encodeURIComponent(query)}`);
@@ -251,23 +280,24 @@ export function ReeFloatingButton() {
   return (
     <>
       {(showAIMenu || showNavMenu) && (
-        <Pressable 
-          style={styles.overlay} 
+        <Pressable
+          style={styles.overlay}
           onPress={() => {
             if (showAIMenu) closeAIMenu();
             if (showNavMenu) closeNavMenu();
           }}
         />
       )}
-      
+
       {showAIMenu && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.aiMenuContainer,
             {
+              bottom: (Platform.OS === 'ios' ? 120 : 100) + insets.bottom,
               opacity: aiMenuAnim,
               transform: [
-                { 
+                {
                   translateY: aiMenuAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: [20, 0],
@@ -314,13 +344,13 @@ export function ReeFloatingButton() {
       )}
 
       {showNavMenu && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.navMenuContainer,
             {
               opacity: navMenuAnim,
               transform: [
-                { 
+                {
                   scale: navMenuAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: [0.8, 1],
@@ -350,7 +380,7 @@ export function ReeFloatingButton() {
           </View>
         </Animated.View>
       )}
-      
+
       <Animated.View
         style={[
           styles.floatingButton,
@@ -372,7 +402,7 @@ export function ReeFloatingButton() {
             <Text style={styles.logoText}>R</Text>
           </View>
         </LinearGradient>
-        
+
         {hasUnseenInsight && !showAIMenu && !showNavMenu && (
           <View style={styles.badge} />
         )}
@@ -389,16 +419,16 @@ const styles = StyleSheet.create({
   },
   floatingButton: {
     position: 'absolute',
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: BUTTON_SIZE / 2,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     zIndex: 100,
     ...glassShadows.glowStrong,
   },
   buttonGradient: {
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: BUTTON_SIZE / 2,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -428,10 +458,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFF',
   },
-  
+
   aiMenuContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 120 : 100,
     right: 20,
     zIndex: 99,
     gap: 10,
@@ -455,7 +484,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     color: liquidGlass.text.primary,
   },
-  
+
   navMenuContainer: {
     position: 'absolute',
     top: '50%',

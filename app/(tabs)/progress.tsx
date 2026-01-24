@@ -5,11 +5,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useApp } from '@/contexts/AppContext';
 import { BodyDiagram, MuscleGroupId } from '@/components/BodyDiagram';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { theme } from '@/constants/theme';
 import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
+import { VoidBackground } from '@/components/ui/VoidBackground';
+import { GlassCard } from '@/components/ui/GlassCard';
 
-const MOCK_MUSCLE_DATA: Record<MuscleGroupId, { 
-  lastWorkout: string; 
+const MOCK_MUSCLE_DATA: Record<MuscleGroupId, {
+  lastWorkout: string;
   totalWorkouts: number;
   avgWeight: number;
   weightProgress: number;
@@ -28,13 +31,7 @@ const MOCK_MUSCLE_DATA: Record<MuscleGroupId, {
   hamstrings: { lastWorkout: '4 days ago', totalWorkouts: 9, avgWeight: 155, weightProgress: 13, lastExercises: ['Romanian Deadlifts', 'Leg Curls', 'Good Mornings'] },
 };
 
-function GlassCard({ children, style }: { children: React.ReactNode; style?: any }) {
-  return (
-    <View style={[styles.glassCard, style]}>
-      {children}
-    </View>
-  );
-}
+// GlassCard imported from shared component
 
 function GlassProgressBar({ progress }: { progress: number }) {
   return (
@@ -94,157 +91,160 @@ export default function ProgressScreen() {
   const progressPercentage = weeklyData.totalWorkouts > 0 ? (weeklyData.completedWorkouts / weeklyData.totalWorkouts) * 100 : 0;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Progress</Text>
-          <Text style={styles.subtitle}>Track your strength journey</Text>
+    <VoidBackground>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Progress</Text>
+            <Text style={styles.subtitle}>Track your strength journey</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsIconButton}
+            onPress={() => {
+              haptics.light();
+              router.push('/settings');
+            }}
+          >
+            <Settings size={22} color={liquidGlass.text.primary} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.settingsIconButton}
-          onPress={() => {
-            haptics.light();
-            router.push('/settings');
-          }}
-        >
-          <Settings size={22} color={liquidGlass.text.primary} />
-        </TouchableOpacity>
-      </View>
 
-      <GlassCard style={styles.narrativeCard}>
-        <Text style={styles.narrativeText}>{narrative}</Text>
-      </GlassCard>
-
-      <View style={styles.statsGrid}>
-        <GlassCard style={styles.statCard}>
-          <Text style={styles.statLabel}>Workouts This Week</Text>
-          <Text style={styles.statValue}>{weeklyData.completedWorkouts}/{weeklyData.totalWorkouts}</Text>
-          <GlassProgressBar progress={progressPercentage} />
+        <GlassCard style={styles.narrativeCard}>
+          <Text style={styles.narrativeText}>{narrative}</Text>
         </GlassCard>
 
-        <GlassCard style={styles.statCard}>
-          <Text style={styles.statLabel}>Avg Pain Level</Text>
-          <View style={styles.statValueRow}>
-            <Text style={styles.statValue}>{weeklyData.avgPain > 0 ? weeklyData.avgPain.toFixed(1) : '-'}</Text>
-            <Text style={styles.statValueSuffix}>/10</Text>
-          </View>
-          <Text style={styles.statNote}>Less discomfort over time</Text>
+        <View style={styles.statsGrid}>
+          <GlassCard style={styles.statCard}>
+            <Text style={styles.statLabel}>Workouts This Week</Text>
+            <Text style={styles.statValue}>{weeklyData.completedWorkouts}/{weeklyData.totalWorkouts}</Text>
+            <GlassProgressBar progress={progressPercentage} />
+          </GlassCard>
+
+          <GlassCard style={styles.statCard}>
+            <Text style={styles.statLabel}>Avg Pain Level</Text>
+            <View style={styles.statValueRow}>
+              <Text style={styles.statValue}>{weeklyData.avgPain > 0 ? weeklyData.avgPain.toFixed(1) : '-'}</Text>
+              <Text style={styles.statValueSuffix}>/10</Text>
+            </View>
+            <Text style={styles.statNote}>Less discomfort over time</Text>
+          </GlassCard>
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Muscle Group Progress</Text>
+          <Text style={styles.sectionSubtitle}>Tap a muscle to see detailed statistics</Text>
+        </View>
+
+        <GlassCard style={styles.bodyDiagramCard}>
+          <BodyDiagram
+            selectedMuscle={selectedMuscle}
+            onMuscleSelect={handleMuscleSelect}
+          />
         </GlassCard>
-      </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Muscle Group Progress</Text>
-        <Text style={styles.sectionSubtitle}>Tap a muscle to see detailed statistics</Text>
-      </View>
-
-      <GlassCard style={styles.bodyDiagramCard}>
-        <BodyDiagram 
-          selectedMuscle={selectedMuscle}
-          onMuscleSelect={handleMuscleSelect}
-        />
-      </GlassCard>
-
-      {selectedMuscle && muscleData && (
-        <GlassCard style={styles.muscleDetailsCard}>
-          <View style={styles.muscleDetailsHeader}>
-            <View>
-              <Text style={styles.muscleDetailsTitle}>
-                {selectedMuscle.charAt(0).toUpperCase() + selectedMuscle.slice(1)}
-              </Text>
-              <Text style={styles.muscleDetailsSubtitle}>Detailed Progress</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.closeButton}
-              onPress={() => setSelectedMuscle(null)}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.muscleStatsGrid}>
-            <View style={styles.muscleStat}>
-              <View style={styles.muscleStatIcon}>
-                <Calendar size={20} color={liquidGlass.accent.primary} />
-              </View>
-              <Text style={styles.muscleStatLabel}>Last Workout</Text>
-              <Text style={styles.muscleStatValue}>{muscleData.lastWorkout}</Text>
-            </View>
-
-            <View style={styles.muscleStat}>
-              <View style={styles.muscleStatIcon}>
-                <Dumbbell size={20} color={liquidGlass.status.warning} />
-              </View>
-              <Text style={styles.muscleStatLabel}>Total Sessions</Text>
-              <Text style={styles.muscleStatValue}>{muscleData.totalWorkouts}</Text>
-            </View>
-
-            {muscleData.avgWeight > 0 && (
-              <View style={styles.muscleStat}>
-                <View style={styles.muscleStatIcon}>
-                  <TrendingUp size={20} color={liquidGlass.status.success} />
-                </View>
-                <Text style={styles.muscleStatLabel}>Avg Weight</Text>
-                <Text style={styles.muscleStatValue}>{muscleData.avgWeight} lb</Text>
-              </View>
-            )}
-
-            {muscleData.weightProgress > 0 && (
-              <View style={styles.muscleStat}>
-                <View style={styles.muscleStatIcon}>
-                  <TrendingUp size={20} color={liquidGlass.status.success} />
-                </View>
-                <Text style={styles.muscleStatLabel}>Progress</Text>
-                <Text style={[styles.muscleStatValue, { color: liquidGlass.status.success }]}>
-                  +{muscleData.weightProgress}%
+        {selectedMuscle && muscleData && (
+          <GlassCard style={styles.muscleDetailsCard}>
+            <View style={styles.muscleDetailsHeader}>
+              <View>
+                <Text style={styles.muscleDetailsTitle}>
+                  {selectedMuscle.charAt(0).toUpperCase() + selectedMuscle.slice(1)}
                 </Text>
+                <Text style={styles.muscleDetailsSubtitle}>Detailed Progress</Text>
               </View>
-            )}
-          </View>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setSelectedMuscle(null)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.recentExercises}>
-            <Text style={styles.recentExercisesTitle}>Recent Exercises</Text>
-            {muscleData.lastExercises.map((exercise, index) => (
-              <View key={index} style={styles.exerciseItem}>
-                <View style={styles.exerciseDot} />
-                <Text style={styles.exerciseText}>{exercise}</Text>
+            <View style={styles.muscleStatsGrid}>
+              <View style={styles.muscleStat}>
+                <View style={styles.muscleStatIcon}>
+                  <Calendar size={20} color={liquidGlass.accent.primary} />
+                </View>
+                <Text style={styles.muscleStatLabel}>Last Workout</Text>
+                <Text style={styles.muscleStatValue}>{muscleData.lastWorkout}</Text>
               </View>
-            ))}
-          </View>
-        </GlassCard>
-      )}
 
-      <View style={styles.settingsSection}>
-        <Text style={styles.settingsSectionTitle}>Settings</Text>
-        <TouchableOpacity style={styles.settingsButton} onPress={handleRetakePress}>
-          <View style={styles.settingsIcon}>
-            <RefreshCw size={22} color={liquidGlass.accent.primary} />
-          </View>
-          <View style={styles.settingsContent}>
-            <Text style={styles.settingsLabel}>Retake Assessment</Text>
-            <Text style={styles.settingsDescription}>Revisit your profile anytime</Text>
-          </View>
-          <ChevronRight size={20} color={liquidGlass.text.tertiary} />
-        </TouchableOpacity>
-      </View>
+              <View style={styles.muscleStat}>
+                <View style={styles.muscleStatIcon}>
+                  <Dumbbell size={20} color={liquidGlass.status.warning} />
+                </View>
+                <Text style={styles.muscleStatLabel}>Total Sessions</Text>
+                <Text style={styles.muscleStatValue}>{muscleData.totalWorkouts}</Text>
+              </View>
 
-      <ConfirmDialog
-        visible={showRetakeConfirm}
-        title="Retake Assessment?"
-        message="This will reset your profile and take you back to the onboarding process. Your progress data will be preserved."
-        confirmText="Retake"
-        cancelText="Cancel"
-        type="warning"
-        onConfirm={handleConfirmRetake}
-        onCancel={() => setShowRetakeConfirm(false)}
-      />
+              {muscleData.avgWeight > 0 && (
+                <View style={styles.muscleStat}>
+                  <View style={styles.muscleStatIcon}>
+                    <TrendingUp size={20} color={liquidGlass.status.success} />
+                  </View>
+                  <Text style={styles.muscleStatLabel}>Avg Weight</Text>
+                  <Text style={styles.muscleStatValue}>{muscleData.avgWeight} lb</Text>
+                </View>
+              )}
 
-      <View style={styles.bottomSpacer} />
-    </ScrollView>
+              {muscleData.weightProgress > 0 && (
+                <View style={styles.muscleStat}>
+                  <View style={styles.muscleStatIcon}>
+                    <TrendingUp size={20} color={liquidGlass.status.success} />
+                  </View>
+                  <Text style={styles.muscleStatLabel}>Progress</Text>
+                  <Text style={[styles.muscleStatValue, { color: liquidGlass.status.success }]}>
+                    +{muscleData.weightProgress}%
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.recentExercises}>
+              <Text style={styles.recentExercisesTitle}>Recent Exercises</Text>
+              {muscleData.lastExercises.map((exercise, index) => (
+                <View key={index} style={styles.exerciseItem}>
+                  <View style={styles.exerciseDot} />
+                  <Text style={styles.exerciseText}>{exercise}</Text>
+                </View>
+              ))}
+            </View>
+          </GlassCard>
+        )}
+
+        <View style={styles.settingsSection}>
+          <Text style={styles.settingsSectionTitle}>Settings</Text>
+          <TouchableOpacity style={styles.settingsButton} onPress={handleRetakePress}>
+            <View style={styles.settingsIcon}>
+              <RefreshCw size={22} color={liquidGlass.accent.primary} />
+            </View>
+            <View style={styles.settingsContent}>
+              <Text style={styles.settingsLabel}>Retake Assessment</Text>
+              <Text style={styles.settingsDescription}>Revisit your profile anytime</Text>
+            </View>
+            <ChevronRight size={20} color={liquidGlass.text.tertiary} />
+          </TouchableOpacity>
+        </View>
+
+        <ConfirmDialog
+          visible={showRetakeConfirm}
+          title="Retake Assessment?"
+          message="This will reset your profile and take you back to the onboarding process. Your progress data will be preserved."
+          confirmText="Retake"
+          cancelText="Cancel"
+          type="warning"
+          onConfirm={handleConfirmRetake}
+          onCancel={() => setShowRetakeConfirm(false)}
+        />
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+    </VoidBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: liquidGlass.background.primary },
+  scrollView: { flex: 1 },
   scrollContent: { padding: glassLayout.screenPadding, paddingTop: glassLayout.screenPaddingTop, paddingBottom: 40 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 },
   headerContent: { flex: 1 },

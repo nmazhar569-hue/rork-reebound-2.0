@@ -11,6 +11,7 @@ import { ExerciseInputCard } from '@/components/ExerciseInputCard';
 import { RestTimerOverlay } from '@/components/RestTimerOverlay';
 import { PostWorkoutFeedback } from '@/components/PostWorkoutFeedback';
 import { storageService } from '@/services/StorageService';
+import { fatigueTracker } from '@/services/FatigueTracker';
 import { DailyLog, WorkoutSession, ExerciseLog, SetLog } from '@/types';
 import colors, { gradients } from '@/constants/colors';
 import { haptics } from '@/utils/haptics';
@@ -56,7 +57,7 @@ export default function WorkoutScreen() {
 
   const startRoutine = useCallback(() => {
     haptics.completionWave();
-    
+
     Animated.sequence([
       Animated.timing(startButtonScale, {
         toValue: 0.95,
@@ -201,6 +202,10 @@ export default function WorkoutScreen() {
       try {
         await storageService.saveWorkout(session);
         console.log('[WorkoutScreen] Session saved to persistent storage');
+
+        // Track muscle fatigue for connected recovery
+        const fatiguedParts = await fatigueTracker.recordWorkoutCompletion(session);
+        console.log('[WorkoutScreen] Fatigued parts:', fatiguedParts);
       } catch (error) {
         console.error('[WorkoutScreen] Failed to save session:', error);
       }
@@ -279,7 +284,7 @@ export default function WorkoutScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <LinearGradient
-        colors={['#F5F7FA', '#EEF1F5', '#F8F9FB']}
+        colors={['#020617', '#0F172A', '#020617']}
         style={StyleSheet.absoluteFill}
       />
 
@@ -385,7 +390,7 @@ export default function WorkoutScreen() {
               exercise={exercise}
               exerciseIndex={index}
               initialSets={exerciseInputs[exercise.id]}
-              onSetComplete={(setIndex, data) => 
+              onSetComplete={(setIndex, data) =>
                 handleSetComplete(exercise.id, exercise.name, exercise.rest, setIndex, data)
               }
               onAllSetsChange={(sets) => handleExerciseSetsChange(exercise.id, sets)}
@@ -399,10 +404,10 @@ export default function WorkoutScreen() {
         {routineStarted && (
           <View style={styles.finishContainer}>
             <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.finishButtonShadow,
-                { 
+                {
                   shadowOpacity: finishButtonShadowOpacity,
                 }
               ]}
@@ -444,7 +449,7 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#020617',
   },
   safeArea: {
     flex: 1,
@@ -460,11 +465,11 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   headerCenter: {
     flex: 1,
@@ -474,12 +479,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700' as const,
-    color: colors.text,
+    color: '#E2E8F0',
     textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 13,
-    color: colors.textSecondary,
+    color: '#94A3B8',
     marginTop: 2,
   },
   statsBar: {
@@ -488,8 +493,8 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 194, 184, 0.2)',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: 'rgba(0, 217, 184, 0.2)',
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
   },
   statsContent: {
     flexDirection: 'row',
@@ -536,7 +541,7 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: 24,
     fontWeight: '700' as const,
-    color: colors.text,
+    color: '#E2E8F0',
     fontVariant: ['tabular-nums'],
   },
   timerControls: {
@@ -547,11 +552,11 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(0, 194, 184, 0.1)',
+    backgroundColor: 'rgba(0, 217, 184, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 194, 184, 0.2)',
+    borderColor: 'rgba(0, 217, 184, 0.25)',
   },
   progressSection: {
     flex: 1,
@@ -561,14 +566,14 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: colors.textSecondary,
+    color: '#94A3B8',
   },
   progressBarWrapper: {
     width: 110,
   },
   progressBarTrack: {
     height: 6,
-    backgroundColor: 'rgba(0, 194, 184, 0.15)',
+    backgroundColor: 'rgba(0, 217, 184, 0.2)',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -595,8 +600,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingBottom: 34,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.05)',
-    overflow: 'hidden',
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(2, 6, 23, 0.9)',
   },
   finishButtonShadow: {
     borderRadius: 22,
@@ -626,20 +631,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#020617',
   },
   errorText: {
     fontSize: 18,
-    color: colors.text,
+    color: '#E2E8F0',
     marginBottom: 20,
   },
   backButton: {
-    backgroundColor: 'rgba(0, 194, 184, 0.1)',
+    backgroundColor: 'rgba(0, 217, 184, 0.15)',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(0, 194, 184, 0.2)',
+    borderColor: 'rgba(0, 217, 184, 0.25)',
   },
   backButtonText: {
     fontSize: 16,
@@ -647,3 +652,4 @@ const styles = StyleSheet.create({
     color: TEAL,
   },
 });
+
