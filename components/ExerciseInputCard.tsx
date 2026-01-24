@@ -151,26 +151,25 @@ export function ExerciseInputCard({
     outputRange: ['rgba(0, 194, 184, 0)', 'rgba(255, 122, 80, 0.15)', 'rgba(0, 194, 184, 0)'],
   });
 
-  const textColor = colors.text;
-  const secondaryTextColor = colors.textSecondary;
-  const inputBg = 'rgba(0, 194, 184, 0.06)';
-  const borderColor = colors.borderTeal;
+  // Dark glass theme colors
+  const textColor = '#E2E8F0';
+  const secondaryTextColor = '#94A3B8';
+  const inputBg = 'transparent';
+  const borderColor = 'rgba(0, 217, 184, 0.3)';
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.container,
         { transform: [{ scale: progressPulseAnim }] }
       ]}
     >
-      <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
-      
-      <Animated.View 
+      <Animated.View
         style={[
-          StyleSheet.absoluteFill, 
+          StyleSheet.absoluteFill,
           styles.waveOverlay,
           { backgroundColor: waveColor }
-        ]} 
+        ]}
       />
 
       <View style={styles.glassOverlay} />
@@ -348,10 +347,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xxl,
     overflow: 'hidden',
     marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 194, 184, 0.25)',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    ...shadows.lifted,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 217, 184, 0.2)',
+    backgroundColor: 'rgba(30, 41, 59, 0.5)', // slate-800/50
   },
   waveOverlay: {
     borderRadius: borderRadius.xxl,
@@ -360,10 +358,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: borderRadius.xxl,
     borderWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.8)',
-    borderLeftColor: 'rgba(255, 255, 255, 0.6)',
-    borderRightColor: 'rgba(255, 255, 255, 0.3)',
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderLeftColor: 'rgba(255, 255, 255, 0.08)',
+    borderRightColor: 'rgba(255, 255, 255, 0.04)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.02)',
   },
   header: {
     flexDirection: 'row',
@@ -407,12 +405,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   progressBadge: {
-    backgroundColor: 'rgba(0, 194, 184, 0.15)',
+    backgroundColor: 'rgba(0, 217, 184, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 194, 184, 0.2)',
+    borderColor: 'rgba(0, 217, 184, 0.25)',
   },
   progressText: {
     fontSize: 13,
@@ -421,7 +419,7 @@ const styles = StyleSheet.create({
   },
   progressBarContainer: {
     height: 4,
-    backgroundColor: 'rgba(0, 194, 184, 0.1)',
+    backgroundColor: 'rgba(0, 217, 184, 0.15)',
     marginHorizontal: 18,
     borderRadius: 2,
     overflow: 'hidden',
@@ -441,7 +439,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 194, 184, 0.15)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   columnLabel: {
     fontSize: 10,
@@ -473,7 +471,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   setRowCompleted: {
-    opacity: 0.9,
+    opacity: 0.85,
   },
   setNumber: {
     alignItems: 'center',
@@ -485,12 +483,15 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 44,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    paddingHorizontal: 12,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderBottomWidth: 2,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
     fontSize: 16,
     fontWeight: '600' as const,
     textAlign: 'center',
+    backgroundColor: 'transparent',
   },
   rpeInput: {
     width: 50,
@@ -500,16 +501,16 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     borderWidth: 2,
-    borderColor: 'rgba(0, 194, 184, 0.4)',
+    borderColor: 'rgba(0, 217, 184, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 194, 184, 0.08)',
+    backgroundColor: 'rgba(0, 217, 184, 0.1)',
   },
   checkboxEmpty: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: 'rgba(0, 194, 184, 0.3)',
+    backgroundColor: 'rgba(0, 217, 184, 0.3)',
   },
   checkboxChecked: {
     backgroundColor: TEAL,
@@ -523,9 +524,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(0, 194, 184, 0.08)',
+    backgroundColor: 'rgba(0, 217, 184, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 194, 184, 0.15)',
+    borderColor: 'rgba(0, 217, 184, 0.2)',
   },
   notesText: {
     flex: 1,
@@ -533,3 +534,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+

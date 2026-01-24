@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { 
+import {
   ChevronRight,
   Dumbbell,
   Heart,
@@ -19,11 +19,15 @@ import {
   Play,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
+
+import { theme } from '@/constants/theme';
 import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
 import { EXERCISE_LIBRARY, ExerciseEntry, ExerciseCategory } from '@/constants/database_seed';
 import { useApp } from '@/contexts/AppContext';
 import { Exercise } from '@/types';
+import { VoidBackground } from '@/components/ui/VoidBackground';
+import { GlassCard } from '@/components/ui/GlassCard';
 
 type CategoryKey = 'CROSSFIT' | 'GYM' | 'CARDIO' | 'BODYWEIGHT' | null;
 
@@ -71,13 +75,14 @@ const WORKOUT_CATEGORIES: CategoryOption[] = [
   },
 ];
 
-function GlassCard({ children, style, onPress }: { children: React.ReactNode; style?: any; onPress?: () => void }) {
+// Pressable wrapper using the shared GlassCard
+function PressableGlassCard({ children, style, onPress }: { children: React.ReactNode; style?: any; onPress?: () => void }) {
   const content = (
-    <View style={[styles.glassCard, style]}>
+    <GlassCard style={style}>
       {children}
-    </View>
+    </GlassCard>
   );
-  
+
   if (onPress) {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
@@ -173,10 +178,10 @@ export default function PlanScreen() {
       <Text style={styles.sectionSubtitle}>
         Select the type of workout that matches your goals
       </Text>
-      
+
       <View style={styles.categoryGrid}>
         {WORKOUT_CATEGORIES.map((category) => (
-          <GlassCard
+          <PressableGlassCard
             key={category.id}
             style={styles.categoryCard}
             onPress={() => handleCategorySelect(category.id)}
@@ -188,8 +193,8 @@ export default function PlanScreen() {
               <Text style={styles.categoryLabel}>{category.label}</Text>
               <Text style={styles.categoryDescription}>{category.description}</Text>
             </View>
-            <ChevronRight size={20} color={liquidGlass.text.tertiary} />
-          </GlassCard>
+            <ChevronRight size={20} color={theme.colors.textTertiary} />
+          </PressableGlassCard>
         ))}
       </View>
     </View>
@@ -197,10 +202,10 @@ export default function PlanScreen() {
 
   const renderMuscleGroupSelection = () => {
     const category = WORKOUT_CATEGORIES.find(c => c.id === selectedCategory);
-    
+
     return (
       <View style={styles.muscleGroupsContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={handleBack}
           activeOpacity={0.7}
@@ -226,7 +231,7 @@ export default function PlanScreen() {
           {uniqueMuscleGroups.map((muscleGroup) => {
             const count = filteredExercises.filter(ex => ex.muscleGroup === muscleGroup).length;
             return (
-              <GlassCard
+              <PressableGlassCard
                 key={muscleGroup}
                 style={styles.muscleGroupCard}
                 onPress={() => handleMuscleGroupSelect(muscleGroup)}
@@ -235,8 +240,8 @@ export default function PlanScreen() {
                   <Text style={styles.muscleGroupLabel}>{muscleGroup}</Text>
                   <Text style={styles.muscleGroupDescription}>{count} exercises</Text>
                 </View>
-                <ChevronRight size={20} color={liquidGlass.text.tertiary} />
-              </GlassCard>
+                <ChevronRight size={20} color={theme.colors.textTertiary} />
+              </PressableGlassCard>
             );
           })}
         </View>
@@ -249,7 +254,7 @@ export default function PlanScreen() {
 
     return (
       <View style={styles.workoutListContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={handleBack}
           activeOpacity={0.7}
@@ -277,7 +282,7 @@ export default function PlanScreen() {
           {exercisesForMuscleGroup.map((exercise) => {
             const isSelected = isExerciseSelected(exercise.id);
             const difficultyColor = exercise.difficulty === 'Beginner' ? '#22C55E' : exercise.difficulty === 'Intermediate' ? '#EAB308' : '#EF4444';
-            
+
             return (
               <TouchableOpacity
                 key={exercise.id}
@@ -325,10 +330,10 @@ export default function PlanScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView 
+    <VoidBackground>
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent} 
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -342,20 +347,20 @@ export default function PlanScreen() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-    </View>
+    </VoidBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: liquidGlass.background.primary,
   },
   scrollView: {
     flex: 1,
   },
-  scrollContent: { 
-    padding: glassLayout.screenPadding, 
+  scrollContent: {
+    padding: glassLayout.screenPadding,
     paddingTop: glassLayout.screenPaddingTop,
   },
   header: {
@@ -577,14 +582,14 @@ const styles = StyleSheet.create({
     backgroundColor: liquidGlass.accent.primary,
     paddingVertical: 16,
     borderRadius: 50,
-    ...glassShadows.glow,
+    ...glassShadows.glowTeal,
   },
   startButtonText: {
     fontSize: 17,
     fontWeight: '700' as const,
     color: '#FFF',
   },
-  bottomSpacer: { 
+  bottomSpacer: {
     height: glassLayout.tabBarHeight,
   },
 });
