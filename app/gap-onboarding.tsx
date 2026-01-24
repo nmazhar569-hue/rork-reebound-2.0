@@ -77,7 +77,7 @@ interface OnboardingData {
 }
 
 export default function GapAnalysisOnboarding() {
-    const { setUserProfile } = useApp();
+    const { completeOnboarding } = useApp();
     const [step, setStep] = useState(1);
     const [data, setData] = useState<OnboardingData>({
         name: '',
@@ -445,7 +445,8 @@ export default function GapAnalysisOnboarding() {
         };
 
         console.log('Onboarding complete:', profile);
-        // TODO: Save to context/storage
+        // Save to context/storage
+        await completeOnboarding(profile as any);
 
         router.replace('/(tabs)');
     };
