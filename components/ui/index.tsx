@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { LucideIcon } from 'lucide-react-native';
 import colors, { gradients, borderRadius, shadows, animation } from '@/constants/colors';
+import { liquidGlass, glassShadows } from '@/constants/liquidGlass';
 import { haptics } from '@/utils/haptics';
 
 interface ScreenContainerProps {
@@ -124,14 +125,14 @@ export function PrimaryButton({ onPress, label, icon: Icon, iconPosition = 'left
     >
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <LinearGradient
-          colors={disabled ? [colors.textTertiary, colors.textTertiary] : gradients.primary}
+          colors={disabled ? [liquidGlass.text.tertiary, liquidGlass.text.tertiary] : [liquidGlass.accent.primary, liquidGlass.accent.primary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.primaryButton}
         >
-          {Icon && iconPosition === 'left' && <Icon size={20} color={colors.surface} />}
+          {Icon && iconPosition === 'left' && <Icon size={20} color={liquidGlass.text.inverse} />}
           {label && <Text style={styles.primaryButtonText}>{label}</Text>}
-          {Icon && iconPosition === 'right' && <Icon size={20} color={colors.surface} />}
+          {Icon && iconPosition === 'right' && <Icon size={20} color={liquidGlass.text.inverse} />}
         </LinearGradient>
       </Animated.View>
     </Pressable>
@@ -173,9 +174,9 @@ export function SolidButton({ onPress, label, icon: Icon, iconPosition = 'left',
       testID={testID}
     >
       <Animated.View style={[styles.solidButton, disabled && styles.buttonDisabled, style, { transform: [{ scale: scaleAnim }] }]}>
-        {Icon && iconPosition === 'left' && <Icon size={20} color={colors.surface} />}
+        {Icon && iconPosition === 'left' && <Icon size={20} color={liquidGlass.text.inverse} />}
         {label && <Text style={styles.solidButtonText}>{label}</Text>}
-        {Icon && iconPosition === 'right' && <Icon size={20} color={colors.surface} />}
+        {Icon && iconPosition === 'right' && <Icon size={20} color={liquidGlass.text.inverse} />}
       </Animated.View>
     </Pressable>
   );
@@ -195,9 +196,9 @@ export function GhostButton({ onPress, label, icon: Icon, iconPosition = 'left',
       testID={testID}
       style={[styles.ghostButton, disabled && styles.ghostButtonDisabled, style]}
     >
-      {Icon && iconPosition === 'left' && <Icon size={18} color={colors.primary} />}
+      {Icon && iconPosition === 'left' && <Icon size={18} color={liquidGlass.accent.primary} />}
       {label && <Text style={styles.ghostButtonText}>{label}</Text>}
-      {Icon && iconPosition === 'right' && <Icon size={18} color={colors.primary} />}
+      {Icon && iconPosition === 'right' && <Icon size={18} color={liquidGlass.accent.primary} />}
     </TouchableOpacity>
   );
 }
@@ -211,7 +212,7 @@ interface IconButtonProps {
   testID?: string;
 }
 
-export function IconButton({ onPress, icon: Icon, size = 22, color = colors.textSecondary, style, testID }: IconButtonProps) {
+export function IconButton({ onPress, icon: Icon, size = 22, color = liquidGlass.text.secondary, style, testID }: IconButtonProps) {
   const handlePress = useCallback(() => {
     haptics.light();
     onPress();
@@ -230,7 +231,7 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-export function Badge({ label, color = colors.primary, style }: BadgeProps) {
+export function Badge({ label, color = liquidGlass.accent.primary, style }: BadgeProps) {
   return (
     <View style={[styles.badge, { backgroundColor: color + '15' }, style]}>
       <Text style={[styles.badgeText, { color }]}>{label}</Text>
@@ -245,7 +246,7 @@ interface LoadingStateProps {
 export function LoadingState({ message }: LoadingStateProps) {
   return (
     <View style={styles.loadingState}>
-      <ActivityIndicator size="large" color={colors.primary} />
+      <ActivityIndicator size="large" color={liquidGlass.accent.primary} />
       {message && <Text style={styles.loadingText}>{message}</Text>}
     </View>
   );
@@ -284,7 +285,7 @@ export function ProgressBar({ progress, height = 6, showGradient = true }: Progr
     <View style={[styles.progressBarContainer, { height }]}>
       {showGradient ? (
         <LinearGradient
-          colors={gradients.primary}
+          colors={[liquidGlass.accent.primary, liquidGlass.accent.primary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={[styles.progressBarFill, { width: `${clampedProgress}%`, borderRadius: height / 2 }]}
@@ -312,7 +313,7 @@ interface InfoBoxProps {
   style?: ViewStyle;
 }
 
-export function InfoBox({ children, icon: Icon, color = colors.primary, style }: InfoBoxProps) {
+export function InfoBox({ children, icon: Icon, color = liquidGlass.accent.primary, style }: InfoBoxProps) {
   return (
     <View style={[styles.infoBox, { backgroundColor: color + '08' }, style]}>
       {Icon && (
@@ -328,7 +329,7 @@ export function InfoBox({ children, icon: Icon, color = colors.primary, style }:
 const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   screenContent: {
     padding: 20,
@@ -349,24 +350,26 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 32,
     fontWeight: '800' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
     letterSpacing: -0.8,
     marginBottom: 8,
   },
   pageSubtitle: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: liquidGlass.text.secondary,
     lineHeight: 24,
     fontWeight: '500' as const,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xxl,
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 24,
     padding: 22,
-    ...shadows.medium,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    ...glassShadows.soft,
   },
   cardElevated: {
-    ...shadows.lifted,
+    ...glassShadows.soft,
   },
   primaryButton: {
     flexDirection: 'row',
@@ -375,13 +378,13 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 17,
     paddingHorizontal: 28,
-    borderRadius: borderRadius.full,
-    ...shadows.glowSoft(colors.primary),
+    borderRadius: 30,
+    ...glassShadows.glow,
   },
   primaryButtonText: {
     fontSize: 17,
     fontWeight: '700' as const,
-    color: colors.surface,
+    color: liquidGlass.text.inverse,
     letterSpacing: 0.2,
   },
   solidButton: {
@@ -391,19 +394,19 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 17,
     paddingHorizontal: 28,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    ...shadows.glowSoft(colors.primary),
+    borderRadius: 30,
+    backgroundColor: liquidGlass.accent.primary,
+    ...glassShadows.glow,
   },
   solidButtonText: {
     fontSize: 17,
     fontWeight: '700' as const,
-    color: colors.surface,
+    color: liquidGlass.text.inverse,
     letterSpacing: 0.2,
   },
   buttonDisabled: {
-    backgroundColor: colors.textTertiary,
-    shadowOpacity: 0,
+    backgroundColor: liquidGlass.text.tertiary,
+    opacity: 0.5,
   },
   ghostButton: {
     flexDirection: 'row',
@@ -412,8 +415,8 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 15,
     paddingHorizontal: 26,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryMuted,
+    borderRadius: 30,
+    backgroundColor: liquidGlass.accent.muted,
   },
   ghostButtonDisabled: {
     opacity: 0.5,
@@ -421,22 +424,23 @@ const styles = StyleSheet.create({
   ghostButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: colors.primary,
+    color: liquidGlass.accent.primary,
     letterSpacing: 0.1,
   },
   iconButton: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.glass,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.medium,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
   },
   badge: {
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: borderRadius.full,
+    borderRadius: 20,
     alignSelf: 'flex-start',
   },
   badgeText: {
@@ -448,31 +452,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     padding: 40,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 15,
-    color: colors.textSecondary,
+    color: liquidGlass.text.secondary,
   },
   emptyState: {
     padding: 40,
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xxl,
-    ...shadows.medium,
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+    ...glassShadows.soft,
   },
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: '700' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
     marginBottom: 10,
     letterSpacing: -0.2,
   },
   emptyStateText: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: liquidGlass.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
     fontWeight: '500' as const,
@@ -481,8 +487,8 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   progressBarContainer: {
-    backgroundColor: colors.surfaceDim,
-    borderRadius: borderRadius.full,
+    backgroundColor: liquidGlass.surface.glassDark,
+    borderRadius: 10,
     overflow: 'hidden',
   },
   progressBarFill: {
@@ -490,12 +496,12 @@ const styles = StyleSheet.create({
   },
   progressBarFillSolid: {
     height: '100%',
-    backgroundColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
     marginBottom: 16,
     letterSpacing: -0.3,
   },
@@ -503,7 +509,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 18,
-    borderRadius: borderRadius.xl,
+    borderRadius: 20,
     gap: 14,
   },
   infoBoxIcon: {

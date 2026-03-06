@@ -1,16 +1,16 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Zap,
   Flame,
@@ -18,39 +18,49 @@ import {
   AlertCircle,
   Sparkles,
   Camera,
+  Star,
+  Bell
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '@/contexts/AppContext';
-import { FoodEntry, NutritionLog, WorkoutIntensityDay, MacroTargets } from '@/types';
+import { VoidBackground } from '@/components/VoidBackground';
+import { FoodEntry, NutritionLog, WorkoutIntensityDay, MacroTargets, WorkoutSession } from '@/types';
 import { haptics } from '@/utils/haptics';
 import { FuelGaugeDashboard } from '@/components/MacroRingChart';
 import { SmartFoodLogger } from '@/components/SmartFoodLogger';
+import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
+import { router } from 'expo-router';
+import { useRee } from '@/contexts/ReeContext';
 
-const { width } = Dimensions.get('window');
 
-const NEON_LIME = '#CCFF00';
-const TEAL = '#00C2B8';
-const ORANGE = '#FF7A50';
-const BG_PRIMARY = '#000000';
-const BG_CARD = 'rgba(255,255,255,0.03)';
-const BORDER_COLOR = 'rgba(255,255,255,0.06)';
+// Components
+import { DynamicStatusPanel, PanelContext } from '@/components/DynamicStatusPanel';
+import { ReeAnalysisModal } from '@/components/ReeAnalysisModal';
+import { RecoveryInbox } from '@/components/RecoveryInbox';
+
+// Services
+import { analysisService, RecoveryAnalysis } from '@/services/AnalysisService';
+import { calendarService, DailyAvailability } from '@/services/CalendarService';
+import { storageService } from '@/services/StorageService';
+import { MineralDashboard } from '@/components/MineralDashboard';
+import { WaterTracker } from '@/components/WaterTracker';
 
 interface MealSlot {
-  id: string;
+  id: 'breakfast' | 'lunch' | 'dinner' | 'pre_workout' | 'post_workout' | 'snack';
   name: string;
   time: string;
   icon: string;
   entries: FoodEntry[];
 }
 
-const RECENT_FOODS = [
-  { id: 'chicken', label: 'Chicken Breast', emoji: '🍗', protein: 31, carbs: 0, fats: 3, calories: 165 },
-  { id: 'rice', label: 'Brown Rice', emoji: '🍚', protein: 5, carbs: 45, fats: 2, calories: 216 },
-  { id: 'eggs', label: 'Eggs (2)', emoji: '🥚', protein: 12, carbs: 1, fats: 10, calories: 140 },
-  { id: 'shake', label: 'Protein Shake', emoji: '🥤', protein: 25, carbs: 5, fats: 2, calories: 130 },
-  { id: 'salmon', label: 'Salmon', emoji: '🐟', protein: 25, carbs: 0, fats: 12, calories: 208 },
-  { id: 'oats', label: 'Oatmeal', emoji: '🥣', protein: 6, carbs: 27, fats: 3, calories: 150 },
-];
+const { width } = Dimensions.get('window');
+
+const NEON_LIME = liquidGlass.accent.primary;
+const TEAL = liquidGlass.accent.primary;
+const ORANGE = liquidGlass.status.warning;
+const BG_PRIMARY = 'transparent';
+const BG_CARD = liquidGlass.surface.card;
+const BORDER_COLOR = liquidGlass.border.glass;
 
 const getWorkoutIntensity = (todayLog: { workoutCompleted?: boolean } | null): WorkoutIntensityDay => {
   if (!todayLog?.workoutCompleted) return 'rest';
@@ -61,7 +71,7 @@ const getDynamicTargets = (intensity: WorkoutIntensityDay, weight: number = 75):
   const baseProtein = weight * 2;
   const baseCarbs = weight * 3;
   const baseFats = weight * 0.8;
-  
+
   const multipliers: Record<WorkoutIntensityDay, { carbs: number; calories: number }> = {
     rest: { carbs: 0.7, calories: 0.85 },
     light: { carbs: 0.85, calories: 0.95 },
@@ -69,7 +79,7 @@ const getDynamicTargets = (intensity: WorkoutIntensityDay, weight: number = 75):
     high: { carbs: 1.2, calories: 1.1 },
     intense: { carbs: 1.4, calories: 1.2 },
   };
-  
+
   const mult = multipliers[intensity];
   return {
     protein: Math.round(baseProtein),
@@ -98,46 +108,59 @@ const getAISuggestion = (
   const proteinGap = targets.protein - currentMacros.protein;
   const carbsGap = targets.carbs - currentMacros.carbs;
   const fatsGap = targets.fats - currentMacros.fats;
-  
+
   if (hasInflammation && currentMacros.carbs > 50) {
     return "Consider anti-inflammatory foods like salmon, leafy greens, or turmeric to support recovery.";
   }
-  
+
   if (proteinGap > 40) {
     return `You're ${proteinGap}g short on protein. Try grilled chicken, Greek yogurt, or a protein shake.`;
   }
-  
+
   if (carbsGap > 60) {
     return `Need ${carbsGap}g more carbs for energy. Sweet potato or oatmeal would be great choices.`;
   }
-  
+
   if (fatsGap > 20) {
     return `Add some healthy fats like avocado, nuts, or olive oil to support hormone function.`;
   }
-  
+
   if (proteinGap <= 0 && carbsGap <= 0 && fatsGap <= 0) {
     return "Great job! You've hit all your macro targets for today. Stay hydrated!";
   }
-  
+
   return "You're on track. Keep up the balanced eating for optimal recovery and performance.";
 };
 
 export default function NutritionScreen() {
-  const { getTodayLog, logNutrition, userProfile } = useApp();
+  const { getTodayLog, logNutrition, userProfile, userPoints, dailyLogs } = useApp();
+  const { hasUnseenInsight } = useRee();
   const todayLog = getTodayLog();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>(todayLog?.nutritionLog?.foodEntries || []);
+
+  // Calculate dateKey first so we can initialize state correctly if needed, 
+  // though useEffect will handle updates.
+  const dateKey = selectedDate.toISOString().split('T')[0];
+
+  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
+  const [waterIntake, setWaterIntake] = useState<number>(0);
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [activeMealSlot, setActiveMealSlot] = useState<string | null>(null);
+  const [inboxVisible, setInboxVisible] = useState(false);
+  const [checkInModalVisible, setCheckInModalVisible] = useState(false);
+  const [recoveryStatus, setRecoveryStatus] = useState<RecoveryAnalysis | null>(null);
+  const [calendarAvailability, setCalendarAvailability] = useState<DailyAvailability | null>(null);
+  const [lastWorkout, setLastWorkout] = useState<WorkoutSession | null>(null);
+  const [weeklyVolumeAvg, setWeeklyVolumeAvg] = useState<number>(0);
+  // Removed initial state dependency on todayLog to rely on effect
+  const [waterTarget, setWaterTarget] = useState<number>(2500);
 
-  const dateKey = selectedDate.toISOString().split('T')[0];
-  
   const workoutIntensity = getWorkoutIntensity(todayLog);
   const userWeight = userProfile?.weight || 75;
   const targets = getDynamicTargets(workoutIntensity, userWeight);
   const intensityInfo = getIntensityLabel(workoutIntensity);
-  
+
   const hasInflammation = userProfile?.injuryType !== undefined;
 
   const currentMacros = useMemo(() => {
@@ -153,6 +176,58 @@ export default function NutritionScreen() {
   }, [foodEntries]);
 
   const aiSuggestion = getAISuggestion(currentMacros, targets, hasInflammation);
+
+  // Effect to load data when date changes
+  useEffect(() => {
+    const logForDate = dailyLogs.find(l => l.date === dateKey);
+    const nutrition = logForDate?.nutritionLog;
+
+    setFoodEntries(nutrition?.foodEntries || []);
+    setWaterIntake(nutrition?.waterIntake || 0);
+  }, [dateKey, dailyLogs]);
+
+  // Load history & biometrics for panel
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const last = await storageService.getLastWorkout();
+        const avgVolume = await storageService.getWeeklyVolumeAverage();
+        setLastWorkout(last);
+        setWeeklyVolumeAvg(avgVolume);
+
+        await calendarService.requestPermissions();
+        const availability = await calendarService.getAvailability();
+        setCalendarAvailability(availability);
+      } catch (error) {
+        console.error('[Nutrition] Data load failed:', error);
+      }
+    };
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    const freeMinutes = calendarAvailability?.totalFreeMinutes;
+    const result = analysisService.analyzeDailyState(
+      {
+        date: new Date(),
+        sleepHours: 7.8,
+        sleepQuality: 'fair',
+        hrv: 55,
+        restingHeartRate: 62,
+        sorenessRating: 3,
+        stressRating: 4,
+      },
+      lastWorkout ?? undefined,
+      weeklyVolumeAvg,
+      freeMinutes
+    );
+    setRecoveryStatus(result);
+  }, [calendarAvailability, lastWorkout, weeklyVolumeAvg]);
+
+  const panelContext = useMemo((): PanelContext => {
+    if (workoutIntensity === 'rest') return 'rest_day';
+    return 'morning_ready';
+  }, [workoutIntensity]);
 
   const formatDate = (date: Date): string => {
     const today = new Date();
@@ -193,14 +268,19 @@ export default function NutritionScreen() {
     ];
   }, [foodEntries]);
 
-  const saveLog = useCallback((foods: FoodEntry[]) => {
-    const log: NutritionLog = { 
-      date: dateKey, 
-      waterIntake: todayLog?.nutritionLog?.waterIntake || 0, 
-      foodEntries: foods 
+  const saveLog = useCallback((foods: FoodEntry[], water?: number) => {
+    const log: NutritionLog = {
+      date: dateKey,
+      waterIntake: water !== undefined ? water : waterIntake,
+      foodEntries: foods
     };
     logNutrition(log);
-  }, [dateKey, logNutrition, todayLog?.nutritionLog?.waterIntake]);
+  }, [dateKey, logNutrition, waterIntake]);
+
+  const handleWaterUpdate = useCallback((newAmount: number) => {
+    setWaterIntake(newAmount);
+    saveLog(foodEntries, newAmount);
+  }, [foodEntries, saveLog]);
 
   const handleOpenAddMeal = useCallback((mealId: string) => {
     haptics.light();
@@ -215,9 +295,10 @@ export default function NutritionScreen() {
     carbs: number;
     fats: number;
     inflammationScore?: number;
+    minerals?: any;
   }) => {
     if (!activeMealSlot) return;
-    
+
     haptics.medium();
     const newEntry: FoodEntry = {
       id: Date.now().toString(),
@@ -229,8 +310,9 @@ export default function NutritionScreen() {
       fats: entry.fats,
       calories: entry.calories,
       inflammationScore: entry.inflammationScore,
+      minerals: entry.minerals,
     };
-    
+
     const updated = [...foodEntries, newEntry];
     setFoodEntries(updated);
     saveLog(updated);
@@ -247,158 +329,173 @@ export default function NutritionScreen() {
     return entries.reduce((sum, e) => sum + (e.calories || 0), 0);
   };
 
+
+
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView 
-          style={styles.scrollView} 
-          contentContainerStyle={styles.scrollContent} 
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Nutrition</Text>
-            <View style={styles.dateNav}>
-              <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.dateNavBtn}>
-                <ChevronLeft size={18} color="rgba(255,255,255,0.6)" />
+    <VoidBackground>
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          {/* ========== PREMIUM HEADER ========== */}
+          <View style={styles.premiumHeader}>
+            <View style={styles.logoRow}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.replace('/')}
+              >
+                <ChevronLeft size={24} color={liquidGlass.text.primary} />
               </TouchableOpacity>
-              <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
-              <TouchableOpacity onPress={() => navigateDate('next')} style={styles.dateNavBtn}>
-                <ChevronRight size={18} color="rgba(255,255,255,0.6)" />
+              <View style={styles.headerTitleContainer}>
+                <Text style={styles.greetingText}>Nutrient Timings</Text>
+                <Text style={styles.logoTitle}>Fueling Plan</Text>
+              </View>
+            </View>
+
+            <View style={styles.headerRight}>
+              <View style={styles.pointsBadge}>
+                <Star size={14} color={liquidGlass.accent.primary} fill={liquidGlass.accent.primary} />
+                <Text style={styles.pointsText}>{userPoints}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.notificationBtn}
+                onPress={() => setInboxVisible(true)}
+              >
+                <Bell size={20} color={liquidGlass.text.primary} />
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.targetCard}>
-            <LinearGradient
-              colors={['rgba(204,255,0,0.08)', 'rgba(0,0,0,0)']}
-              style={styles.targetGradient}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* ========== DYNAMIC PANEL ========== */}
+            <View style={styles.panelContainer}>
+              <DynamicStatusPanel
+                context={panelContext}
+                readinessScore={recoveryStatus?.score ?? 78}
+                sleepHours={7.8}
+                workoutName={workoutIntensity === 'rest' ? "Rest Day" : "Training Day"}
+                recoveryHours="Daily Balance"
+                hrvTrend="up"
+                reeGuidance={aiSuggestion}
+              />
+            </View>
+
+
+
+            <View style={styles.headerNav}>
+              <View style={styles.dateNav}>
+                <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.dateNavBtn}>
+                  <ChevronLeft size={18} color={liquidGlass.text.tertiary} />
+                </TouchableOpacity>
+                <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+                <TouchableOpacity onPress={() => navigateDate('next')} style={styles.dateNavBtn}>
+                  <ChevronRight size={18} color={liquidGlass.text.tertiary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <FuelGaugeDashboard
+              protein={{ current: currentMacros.protein, target: targets.protein }}
+              carbs={{ current: currentMacros.carbs, target: targets.carbs }}
+              fats={{ current: currentMacros.fats, target: targets.fats }}
             />
-            <View style={styles.targetHeader}>
-              <View style={styles.targetLeft}>
-                <Zap size={16} color={intensityInfo.color} />
-                <Text style={[styles.targetLabel, { color: intensityInfo.color }]}>
-                  {intensityInfo.label}
+
+            <WaterTracker
+              currentIntake={waterIntake}
+              targetIntake={waterTarget}
+              onUpdate={handleWaterUpdate}
+            />
+
+            <MineralDashboard entries={foodEntries} />
+
+            {hasInflammation && currentMacros.carbs > 100 && (
+              <View style={styles.warningCard}>
+                <AlertCircle size={18} color={ORANGE} />
+                <Text style={styles.warningText}>
+                  Sugar intake may affect recovery. Consider anti-inflammatory foods.
                 </Text>
               </View>
-              <View style={styles.caloriesBadge}>
-                <Flame size={14} color={ORANGE} />
-                <Text style={styles.caloriesText}>
-                  {currentMacros.calories} / {targets.calories} kcal
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.targetDescription}>
-              {workoutIntensity === 'high' || workoutIntensity === 'intense'
-                ? 'Carbs increased by 20% to fuel your workout and recovery.'
-                : workoutIntensity === 'rest'
-                ? 'Lower carbs today to match your activity level.'
-                : 'Balanced macros for steady energy throughout the day.'}
-            </Text>
-          </View>
+            )}
 
-          <FuelGaugeDashboard
-            protein={{ current: currentMacros.protein, target: targets.protein }}
-            carbs={{ current: currentMacros.carbs, target: targets.carbs }}
-            fats={{ current: currentMacros.fats, target: targets.fats }}
-          />
+            <View style={styles.mealFeedSection}>
+              <Text style={styles.sectionTitle}>Meal Timeline</Text>
 
-          {hasInflammation && currentMacros.carbs > 100 && (
-            <View style={styles.warningCard}>
-              <AlertCircle size={18} color={ORANGE} />
-              <Text style={styles.warningText}>
-                Sugar intake may affect recovery. Consider anti-inflammatory foods.
-              </Text>
-            </View>
-          )}
+              {mealSlots.map((meal, index) => (
+                <View key={meal.id}>
+                  <TouchableOpacity
+                    style={styles.mealCard}
+                    onPress={() => handleOpenAddMeal(meal.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.mealTimelineIndicator}>
+                      <View style={[
+                        styles.timelineDot,
+                        meal.entries.length > 0 && styles.timelineDotFilled
+                      ]} />
+                      {index < mealSlots.length - 1 && <View style={styles.timelineLine} />}
+                    </View>
 
-          <View style={styles.mealFeedSection}>
-            <Text style={styles.sectionTitle}>Meal Timeline</Text>
-            
-            {mealSlots.map((meal, index) => (
-              <View key={meal.id}>
-                <TouchableOpacity 
-                  style={styles.mealCard}
-                  onPress={() => handleOpenAddMeal(meal.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.mealTimelineIndicator}>
-                    <View style={[
-                      styles.timelineDot,
-                      meal.entries.length > 0 && styles.timelineDotFilled
-                    ]} />
-                    {index < mealSlots.length - 1 && <View style={styles.timelineLine} />}
-                  </View>
-                  
-                  <View style={styles.mealContent}>
-                    <View style={styles.mealHeader}>
-                      <View style={styles.mealLeft}>
-                        <Text style={styles.mealIcon}>{meal.icon}</Text>
-                        <View>
-                          <Text style={styles.mealName}>{meal.name}</Text>
-                          <View style={styles.mealTimeRow}>
-                            <Clock size={12} color="rgba(255,255,255,0.4)" />
-                            <Text style={styles.mealTime}>{meal.time}</Text>
+                    <View style={styles.mealContent}>
+                      <View style={styles.mealHeader}>
+                        <View style={styles.mealLeft}>
+                          <Text style={styles.mealIcon}>{meal.icon}</Text>
+                          <View>
+                            <Text style={styles.mealName}>{meal.name}</Text>
+                            <View style={styles.mealTimeRow}>
+                              <Clock size={12} color="rgba(255,255,255,0.4)" />
+                              <Text style={styles.mealTime}>{meal.time}</Text>
+                            </View>
                           </View>
                         </View>
+                        {meal.entries.length > 0 ? (
+                          <Text style={styles.mealCalories}>
+                            {getMealCalories(meal.entries)} kcal
+                          </Text>
+                        ) : (
+                          <View style={styles.addMealBtnSmall}>
+                            <Camera size={14} color={NEON_LIME} />
+                            <Text style={styles.addMealBtnText}>Log Fuel</Text>
+                          </View>
+                        )}
                       </View>
-                      {meal.entries.length > 0 ? (
-                        <Text style={styles.mealCalories}>
-                          {getMealCalories(meal.entries)} kcal
-                        </Text>
-                      ) : (
-                        <View style={styles.addMealBtnSmall}>
-                          <Camera size={14} color={NEON_LIME} />
-                          <Text style={styles.addMealBtnText}>Log Fuel</Text>
+
+                      {meal.entries.length > 0 && (
+                        <View style={styles.mealEntries}>
+                          {meal.entries.map((entry) => (
+                            <View key={entry.id} style={styles.entryChip}>
+                              <Text style={styles.entryText}>{entry.name}</Text>
+                              {entry.protein ? (
+                                <Text style={styles.entryMacros}>
+                                  P:{entry.protein}g C:{entry.carbs}g F:{entry.fats}g
+                                </Text>
+                              ) : null}
+                            </View>
+                          ))}
+                          <TouchableOpacity
+                            style={styles.addMoreBtn}
+                            onPress={() => handleOpenAddMeal(meal.id)}
+                          >
+                            <Plus size={14} color={NEON_LIME} />
+                            <Text style={styles.addMoreText}>Add more</Text>
+                          </TouchableOpacity>
                         </View>
                       )}
                     </View>
-                    
-                    {meal.entries.length > 0 && (
-                      <View style={styles.mealEntries}>
-                        {meal.entries.map((entry) => (
-                          <View key={entry.id} style={styles.entryChip}>
-                            <Text style={styles.entryText}>{entry.name}</Text>
-                            {entry.protein ? (
-                              <Text style={styles.entryMacros}>
-                                P:{entry.protein}g C:{entry.carbs}g F:{entry.fats}g
-                              </Text>
-                            ) : null}
-                          </View>
-                        ))}
-                        <TouchableOpacity 
-                          style={styles.addMoreBtn}
-                          onPress={() => handleOpenAddMeal(meal.id)}
-                        >
-                          <Plus size={14} color={NEON_LIME} />
-                          <Text style={styles.addMoreText}>Add more</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.aiCoachWidget}>
-            <LinearGradient
-              colors={['rgba(204,255,0,0.05)', 'rgba(0,194,184,0.03)']}
-              style={styles.aiCoachGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            />
-            <View style={styles.aiCoachHeader}>
-              <View style={styles.aiCoachIcon}>
-                <Sparkles size={16} color={NEON_LIME} />
-              </View>
-              <Text style={styles.aiCoachTitle}>AI Coach</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
-            <Text style={styles.aiCoachMessage}>{aiSuggestion}</Text>
-          </View>
 
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
-      </SafeAreaView>
+            <View style={styles.bottomSpacer} />
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+
+      {/* Modals */}
+      <RecoveryInbox visible={inboxVisible} onClose={() => setInboxVisible(false)} />
+      <ReeAnalysisModal visible={checkInModalVisible} onClose={() => setCheckInModalVisible(false)} onActionPress={() => router.push('/myworkoutplan')} />
 
       <SmartFoodLogger
         visible={showAddMeal}
@@ -406,116 +503,135 @@ export default function NutritionScreen() {
         onSave={handleSmartLogSave}
         mealName={mealSlots.find(m => m.id === activeMealSlot)?.name || 'Meal'}
       />
-    </View>
+    </VoidBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: BG_PRIMARY,
   },
   safeArea: {
     flex: 1,
   },
+  premiumHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: glassLayout.screenPadding,
+    paddingVertical: 12,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: liquidGlass.surface.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
+  },
+  headerTitleContainer: {
+    justifyContent: 'center',
+  },
+  greetingText: {
+    fontSize: 12,
+    color: liquidGlass.text.tertiary,
+    marginBottom: 2,
+  },
+  logoTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: liquidGlass.text.primary,
+    letterSpacing: -0.5,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  pointsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: `${liquidGlass.accent.primary}20`,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: `${liquidGlass.accent.primary}40`,
+  },
+  pointsText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: liquidGlass.accent.primary,
+  },
+  notificationBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scrollView: {
     flex: 1,
   },
-  scrollContent: { 
-    padding: 20, 
-    paddingTop: 10, 
-    paddingBottom: 120,
+  scrollContent: {
+    paddingHorizontal: glassLayout.screenPadding,
+    paddingTop: 10,
+    paddingBottom: 40,
   },
-  header: {
+  panelContainer: {
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  reeButtonContainer: {
+    alignItems: 'center',
     marginBottom: 24,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-    letterSpacing: -1,
-    marginBottom: 12,
+  headerNav: {
+    marginBottom: 24,
   },
   dateNav: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    justifyContent: 'center',
   },
   dateNavBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: BG_CARD,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: liquidGlass.surface.glass,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: liquidGlass.border.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dateText: {
     fontSize: 15,
     fontWeight: '500' as const,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  targetCard: {
-    backgroundColor: BG_CARD,
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    overflow: 'hidden',
-  },
-  targetGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-  },
-  targetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  targetLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  targetLabel: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-  },
-  caloriesBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,122,80,0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  caloriesText: {
-    color: ORANGE,
-    fontSize: 13,
-    fontWeight: '600' as const,
-  },
-  targetDescription: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    lineHeight: 18,
+    color: liquidGlass.text.secondary,
   },
   warningCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(255,122,80,0.1)',
+    backgroundColor: liquidGlass.status.warningMuted,
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,80,0.2)',
+    borderColor: liquidGlass.status.warningMuted,
   },
   warningText: {
     flex: 1,
@@ -527,9 +643,9 @@ const styles = StyleSheet.create({
     marginTop: 28,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700' as const,
-    color: '#FFFFFF',
+    color: liquidGlass.text.primary,
     marginBottom: 16,
   },
   mealCard: {
@@ -545,29 +661,30 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: liquidGlass.border.glassMedium,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: liquidGlass.border.glass,
   },
   timelineDotFilled: {
     backgroundColor: NEON_LIME,
-    borderColor: 'rgba(204,255,0,0.3)',
+    borderColor: liquidGlass.accent.muted,
   },
   timelineLine: {
     flex: 1,
     width: 2,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: liquidGlass.border.glassLight,
     marginTop: 4,
   },
   mealContent: {
     flex: 1,
-    backgroundColor: BG_CARD,
-    borderRadius: 16,
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 20,
     padding: 16,
     marginLeft: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: liquidGlass.border.glass,
+    ...glassShadows.soft,
   },
   mealHeader: {
     flexDirection: 'row',
@@ -585,7 +702,7 @@ const styles = StyleSheet.create({
   mealName: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: '#FFFFFF',
+    color: liquidGlass.text.primary,
   },
   mealTimeRow: {
     flexDirection: 'row',
@@ -595,7 +712,7 @@ const styles = StyleSheet.create({
   },
   mealTime: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: liquidGlass.text.tertiary,
   },
   mealCalories: {
     fontSize: 14,
@@ -606,7 +723,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(204,255,0,0.1)',
+    backgroundColor: liquidGlass.accent.muted,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -621,17 +738,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   entryChip: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: liquidGlass.surface.glassDark,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glassLight,
   },
   entryText: {
-    color: '#FFFFFF',
+    color: liquidGlass.text.primary,
     fontSize: 14,
   },
   entryMacros: {
-    color: 'rgba(255,255,255,0.4)',
+    color: liquidGlass.text.tertiary,
     fontSize: 11,
     marginTop: 4,
   },
@@ -646,48 +765,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500' as const,
   },
-  aiCoachWidget: {
-    marginTop: 28,
-    backgroundColor: BG_CARD,
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    overflow: 'hidden',
-  },
-  aiCoachGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  aiCoachHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  aiCoachIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(204,255,0,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  aiCoachTitle: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: NEON_LIME,
-  },
-  aiCoachMessage: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  bottomSpacer: { 
+  bottomSpacer: {
     height: 40,
   },
-  
 });

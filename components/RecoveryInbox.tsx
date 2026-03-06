@@ -12,10 +12,12 @@ import {
 import { BlurView } from 'expo-blur';
 import { X, Check, Clock, ShieldAlert, Utensils, Sparkles } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { liquidGlass, glassShadows } from '@/constants/liquidGlass';
-import { suggestionService, Suggestion } from '@/services/SuggestionService';
-import { analysisService } from '@/services/AnalysisService';
+import { userInsightService } from '@/services/UserInsightService';
+import { OptimizationRecommendation } from '@/types/intelligence';
+import { useApp } from '@/contexts/AppContext';
 import { haptics } from '@/utils/haptics';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -27,24 +29,19 @@ interface RecoveryInboxProps {
 
 export function RecoveryInbox({ visible, onClose }: RecoveryInboxProps) {
   const insets = useSafeAreaInsets();
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<OptimizationRecommendation[]>([]);
   const [slideAnim] = useState(new Animated.Value(SCREEN_HEIGHT));
 
   useEffect(() => {
     if (visible) {
-      const analysis = analysisService.analyzeDailyState({
-        date: new Date(),
-        sleepHours: 5.5,
-        sleepQuality: 'fair',
-        hrv: 40,
-        restingHeartRate: 65,
-        sorenessRating: 6,
-        stressRating: 7,
-      });
-
-      const newSuggestions = suggestionService.getSuggestions(analysis.flags);
-      setSuggestions(newSuggestions);
-      console.log('[RecoveryInbox] Generated suggestions:', newSuggestions.length);
+      const loadSuggestions = async () => {
+        // Build fresh model and get optimizations
+        const model = await userInsightService.buildUserModel();
+        const optimizations = await userInsightService.generateOptimizations(model);
+        setSuggestions(optimizations);
+        console.log('[RecoveryInbox] Generated optimizations:', optimizations.length);
+      };
+      loadSuggestions();
 
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -61,39 +58,70 @@ export function RecoveryInbox({ visible, onClose }: RecoveryInboxProps) {
     }
   }, [visible, slideAnim]);
 
+  // Router
+  const router = useRouter();
+
   const handleAction = useCallback(async (id: string, action: 'ACCEPT' | 'DISMISS') => {
     haptics.light();
-    
+
+    // In a real app, we'd log this decision
+    // await userInsightService.logInteraction(id, action);
+
     if (action === 'ACCEPT') {
-      await suggestionService.applySuggestion(id);
-    } else {
-      await suggestionService.dismissSuggestion(id);
+      const item = suggestions.find(s => s.id === id);
+      if (item) {
+        onClose(); // Close inbox
+
+        // Route based on category
+        switch (item.category) {
+          case 'NUTRITION':
+            router.push('/(tabs)/nutrition');
+            break;
+          case 'TRAINING':
+            router.push('/myworkoutplan');
+            break;
+          case 'RECOVERY':
+            // If complex recovery, might need specific route, for now home with context
+            // trigger notification or event?
+            // Ideally check if item.actionId is a protocol
+            router.push('/(tabs)'); // Go home where recovery dashboard might be
+            break;
+          case 'OPTIMIZATION':
+          default:
+            // Maybe generic info modal? For now profile
+            router.push('/profile');
+            break;
+        }
+      }
     }
 
     setSuggestions(prev => prev.filter(s => s.id !== id));
-  }, []);
+  }, [suggestions, onClose, router]);
 
   const handleClose = useCallback(() => {
     haptics.light();
     onClose();
   }, [onClose]);
 
-  const getTypeIcon = (type: Suggestion['type']) => {
-    switch (type) {
-      case 'SCHEDULE':
-        return Clock;
+  const getTypeIcon = (category: OptimizationRecommendation['category']) => {
+    switch (category) {
+      case 'TRAINING':
+        return Check; // Changed from Clock to likely available icon or specific
       case 'NUTRITION':
         return Utensils;
       case 'RECOVERY':
-      default:
         return ShieldAlert;
+      case 'OPTIMIZATION':
+        return Sparkles;
+      default:
+        return Sparkles;
     }
   };
 
-  const getImpactColor = (impact: Suggestion['impact']) => {
+  const getImpactColor = (impact: OptimizationRecommendation['impact']) => {
     switch (impact) {
       case 'HIGH':
-        return liquidGlass.status.danger;
+        return liquidGlass.status.danger; // or a specific "High Impact" color like Purple/Gold
       case 'MEDIUM':
         return liquidGlass.status.warning;
       default:
@@ -105,17 +133,17 @@ export function RecoveryInbox({ visible, onClose }: RecoveryInboxProps) {
     <Modal visible={visible} transparent animationType="none">
       <View style={styles.overlay}>
         <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-        
-        <TouchableOpacity 
-          style={styles.backdrop} 
-          activeOpacity={1} 
+
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
           onPress={handleClose}
         />
 
-        <Animated.View 
+        <Animated.View
           style={[
             styles.container,
-            { 
+            {
               paddingTop: insets.top + 20,
               paddingBottom: insets.bottom + 20,
               transform: [{ translateY: slideAnim }],
@@ -132,8 +160,8 @@ export function RecoveryInbox({ visible, onClose }: RecoveryInboxProps) {
                 {suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''} for you
               </Text>
             </View>
-            <TouchableOpacity 
-              onPress={handleClose} 
+            <TouchableOpacity
+              onPress={handleClose}
               style={styles.closeButton}
               testID="inbox-close-button"
             >
@@ -143,7 +171,7 @@ export function RecoveryInbox({ visible, onClose }: RecoveryInboxProps) {
 
           <View style={styles.dragIndicator} />
 
-          <ScrollView 
+          <ScrollView
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           >
@@ -159,7 +187,7 @@ export function RecoveryInbox({ visible, onClose }: RecoveryInboxProps) {
               </View>
             ) : (
               suggestions.map((item, index) => {
-                const TypeIcon = getTypeIcon(item.type);
+                const TypeIcon = getTypeIcon(item.category);
                 const impactColor = getImpactColor(item.impact);
 
                 return (
@@ -174,7 +202,7 @@ export function RecoveryInbox({ visible, onClose }: RecoveryInboxProps) {
                       <View style={styles.cardHeader}>
                         <View style={styles.typeBadge}>
                           <TypeIcon size={12} color={liquidGlass.text.secondary} />
-                          <Text style={styles.typeText}>{item.type}</Text>
+                          <Text style={styles.typeText}>{item.category}</Text>
                         </View>
                         {item.impact === 'HIGH' && (
                           <View style={[styles.impactBadge, { backgroundColor: impactColor + '20' }]}>
@@ -193,7 +221,7 @@ export function RecoveryInbox({ visible, onClose }: RecoveryInboxProps) {
                       </View>
 
                       <Text style={styles.cardTitle}>{item.title}</Text>
-                      <Text style={styles.cardBody}>{item.message}</Text>
+                      <Text style={styles.cardBody}>{item.description}</Text>
 
                       <View style={styles.actionRow}>
                         <TouchableOpacity

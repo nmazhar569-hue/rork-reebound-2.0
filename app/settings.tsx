@@ -24,6 +24,7 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  Brain,
 } from 'lucide-react-native';
 import { PageHeader, Card } from '@/components/ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -118,18 +119,19 @@ export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [aiSuggestions, setAiSuggestions] = useState(true);
+  const [aiAutoAdjust, setAiAutoAdjust] = useState(false);
   const [metricSystem, setMetricSystem] = useState<'imperial' | 'metric'>('imperial');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  
+
   const { isConnected, healthData, connectHealthKit, connectGoogleFit, syncHealthData, disconnect } = useHealthKit();
 
   const handleHealthSync = async (value: boolean) => {
     if (value) {
       haptics.medium();
-      
+
       const platformName = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
       const connectFunction = Platform.OS === 'ios' ? connectHealthKit : connectGoogleFit;
-      
+
       try {
         const success = await connectFunction();
         if (success) {
@@ -166,11 +168,11 @@ export default function SettingsScreen() {
       Alert.alert('Not Connected', 'Please enable Health Sync first to view your data.');
       return;
     }
-    
+
     const lastSyncText = healthData.lastSynced
       ? new Date(healthData.lastSynced).toLocaleString()
       : 'Never';
-    
+
     Alert.alert(
       'Health Data',
       `Steps: ${healthData.steps.toLocaleString()}\n` +
@@ -289,12 +291,12 @@ export default function SettingsScreen() {
           />
           <View style={styles.divider} />
           <SettingsItem
-            icon={<Activity size={22} color={colors.accent} />}
+            icon={<Brain size={22} color={colors.accent} />}
             label="Auto-Adjust Workouts"
-            description="AI adjusts based on performance"
+            description="AI adjusts weights based on performance"
             toggle
-            toggleValue={false}
-            onToggle={() => {}}
+            toggleValue={aiAutoAdjust}
+            onToggle={setAiAutoAdjust}
           />
         </SettingsSection>
 
@@ -303,14 +305,14 @@ export default function SettingsScreen() {
             icon={<HelpCircle size={22} color={colors.primary} />}
             label="Help & FAQ"
             description="Get answers to common questions"
-            onPress={() => {}}
+            onPress={() => { }}
           />
           <View style={styles.divider} />
           <SettingsItem
             icon={<Shield size={22} color={colors.accent} />}
             label="Privacy Policy"
             description="How we protect your data"
-            onPress={() => {}}
+            onPress={() => { }}
           />
         </SettingsSection>
 

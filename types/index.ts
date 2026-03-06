@@ -1,3 +1,5 @@
+import { Exercise } from './workout';
+export * from './workout';
 export type GenderIdentity = 'woman' | 'man' | 'non_binary' | 'prefer_not_to_say' | 'other';
 export type ExplanationDepth = 'simple' | 'applied_science' | 'deep_biomechanics';
 
@@ -5,19 +7,19 @@ export interface AiPreferences {
   explanationDepth: ExplanationDepth;
 }
 
-export type InjuryType = 
-  | 'acl' 
-  | 'meniscus' 
-  | 'patella' 
-  | 'general_pain' 
+export type InjuryType =
+  | 'acl'
+  | 'meniscus'
+  | 'patella'
+  | 'general_pain'
   | 'post_surgery';
 
-export type KneeInjuryType = 
-  | 'ACL_REHAB' 
-  | 'PATELLAR_TENDONITIS' 
-  | 'MENISCUS_TEAR' 
-  | 'RUNNERS_KNEE' 
-  | 'GENERAL_PAIN' 
+export type KneeInjuryType =
+  | 'ACL_REHAB'
+  | 'PATELLAR_TENDONITIS'
+  | 'MENISCUS_TEAR'
+  | 'RUNNERS_KNEE'
+  | 'GENERAL_PAIN'
   | 'POST_SURGERY';
 
 export type ImpactLevel = 'NONE' | 'LOW' | 'HIGH';
@@ -79,12 +81,12 @@ export interface UserProfile {
   sportType?: SportType;
   weeklyFrequency: number;
   onboardingCompleted: boolean;
-  
+
   // Recovery Baselines (for Analysis Agent)
   baselineSleep?: number; // hours, e.g., 7.5
   baselineHrv?: number;   // ms, e.g., 50
   goal?: 'HYPERTROPHY' | 'STRENGTH' | 'ENDURANCE' | 'GENERAL';
-  
+
   // Body & Lifestyle
   gender?: GenderIdentity;
   height?: number; // cm
@@ -92,23 +94,23 @@ export interface UserProfile {
   sleepQuality?: SleepQuality;
   activityLevel?: ActivityLevel;
   stressLevel?: StressLevel;
-  
+
   // Extended Profile
   nutritionPreferences?: NutritionPreferences;
   trainingBackground?: TrainingBackground;
   recoveryAwareness?: RecoveryAwareness;
   aiPreferences?: AiPreferences;
   unitPreferences?: UnitPreferences;
-  
+
   // North Star - user's motivational goal
   northStar?: string;
-  
+
   // Intent Profile - captures user's primary reason for using the app
   intentProfile?: IntentProfile;
-  
+
   // Recovery-first mode - true for new users after onboarding
   recoveryFirstMode?: boolean;
-  
+
   // Questionnaire Profile - structured onboarding data
   questionnaireProfile?: QuestionnaireProfile;
 }
@@ -118,7 +120,7 @@ export interface SportRelevance {
   purpose: string;
 }
 
-export type MovementPattern = 
+export type MovementPattern =
   | 'push_horizontal'
   | 'push_vertical'
   | 'pull_horizontal'
@@ -136,7 +138,7 @@ export type MovementPattern =
   | 'cardio_intervals'
   | 'mobility';
 
-export type MuscleGroup = 
+export type MuscleGroup =
   | 'quadriceps'
   | 'hamstrings'
   | 'glutes'
@@ -159,7 +161,7 @@ export type MuscleGroup =
   | 'traps'
   | 'neck';
 
-export type EquipmentType = 
+export type EquipmentType =
   | 'none'
   | 'barbell'
   | 'dumbbell'
@@ -314,6 +316,8 @@ export interface RecoveryExercise {
   alternatives?: string[]; // IDs of alternative exercises
 }
 
+// Moved to workout.ts
+/*
 export interface Exercise {
   id: string;
   name: string;
@@ -332,6 +336,7 @@ export interface Exercise {
   alternatives?: ExerciseAlternative[];
   movementPattern?: MovementPattern;
 }
+*/
 
 export interface DailyReadiness {
   date: string;
@@ -414,6 +419,27 @@ export interface DailyLog {
   workoutId?: string;
   exercisesCompleted?: number;
   totalExercises?: number;
+
+  // New metrics for Home Screen
+  energyLevel?: number; // 1-10
+  sleepHours?: number;
+
+  recoveryChecklist?: {
+    id: string;
+    label: string;
+    completed: boolean;
+  }[];
+}
+
+export interface Minerals {
+  magnesium?: number;
+  zinc?: number;
+  calcium?: number;
+  potassium?: number;
+  sodium?: number;
+  iron?: number;
+  phosphorus?: number;
+  selenium?: number;
 }
 
 export interface FoodEntry {
@@ -425,6 +451,7 @@ export interface FoodEntry {
   fats?: number;
   fiber?: number;
   sugar?: number;
+  minerals?: Minerals; // Added minerals
   tags?: string[]; // 'iron', 'calcium', 'fiber', etc.
   timestamp: string;
   inflammationScore?: number; // -2 (anti-inflammatory) to +2 (pro-inflammatory)
@@ -580,7 +607,7 @@ export interface ReflectionEntry {
   acknowledged: boolean;
 }
 
-export type PrimaryIntent = 
+export type PrimaryIntent =
   | 'recover_from_injury'
   | 'return_to_training'
   | 'maintain_without_pain'
@@ -588,7 +615,7 @@ export type PrimaryIntent =
   | 'train_with_confidence'
   | 'general_fitness';
 
-export type PrimaryGoal = 
+export type PrimaryGoal =
   | 'build_muscle'
   | 'lose_fat'
   | 'improve_performance'
@@ -598,7 +625,7 @@ export type PrimaryGoal =
   | 'rehab_recovery'
   | 'other';
 
-export type DesiredOutcomeFocus = 
+export type DesiredOutcomeFocus =
   | 'appearance'
   | 'daily_feeling'
   | 'strength_performance'
@@ -611,7 +638,7 @@ export type TrainingFrequencyCurrent = '0-1' | '2-3' | '4-5' | '6+';
 
 export type NutritionStructureLevel = 'very_structured' | 'somewhat_mindful' | 'inconsistent' | 'not_thinking';
 
-export type DietaryConstraint = 
+export type DietaryConstraint =
   | 'none'
   | 'vegetarian'
   | 'vegan'
@@ -623,7 +650,7 @@ export type DietaryConstraint =
 
 export type TimeCommitment = '<2hrs' | '2-4hrs' | '4-6hrs' | '6+hrs';
 
-export type FrictionPoint = 
+export type FrictionPoint =
   | 'lack_of_time'
   | 'low_energy'
   | 'motivation'
@@ -632,7 +659,7 @@ export type FrictionPoint =
   | 'stress'
   | 'injuries';
 
-export type MotivationDriver = 
+export type MotivationDriver =
   | 'clear_plans'
   | 'accountability'
   | 'data_metrics'
@@ -672,7 +699,7 @@ export interface IntentProfile {
   confirmedAt: string;
 }
 
-export type IdentityTitleKey = 
+export type IdentityTitleKey =
   | 'consistent_mover'
   | 'joint_first_athlete'
   | 'resilient_builder'
@@ -692,7 +719,7 @@ export interface IdentityTitle {
 // Ree Presence System Types
 export type ReePresenceLevel = 'hidden' | 'minimal' | 'available' | 'active';
 
-export type ReeScreenContext = 
+export type ReeScreenContext =
   | 'home'
   | 'plan'
   | 'workout_active'
@@ -702,7 +729,7 @@ export type ReeScreenContext =
   | 'onboarding'
   | 'program_builder';
 
-export type ReeInsightCategory = 
+export type ReeInsightCategory =
   | 'orientation'      // Help user understand where they are
   | 'explanation'      // Explain what they're seeing
   | 'choice_support'   // Help with decisions

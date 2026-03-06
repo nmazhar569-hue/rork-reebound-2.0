@@ -10,6 +10,16 @@ const FoodNutritionSchema = z.object({
   fiber: z.number().optional().describe("Fiber in grams"),
   sugar: z.number().optional().describe("Sugar in grams"),
   inflammationScore: z.number().min(-2).max(2).optional().describe("Inflammation score from -2 (anti-inflammatory) to +2 (pro-inflammatory)"),
+  minerals: z.object({
+    magnesium: z.number().optional().describe("Magnesium in mg"),
+    zinc: z.number().optional().describe("Zinc in mg"),
+    calcium: z.number().optional().describe("Calcium in mg"),
+    potassium: z.number().optional().describe("Potassium in mg"),
+    sodium: z.number().optional().describe("Sodium in mg"),
+    iron: z.number().optional().describe("Iron in mg"),
+    phosphorus: z.number().optional().describe("Phosphorus in mg"),
+    selenium: z.number().optional().describe("Selenium in mcg"),
+  }).optional().describe("Mineral content estimates"),
   confidence: z.enum(["high", "medium", "low"]).describe("Confidence level of the estimation"),
 });
 
@@ -52,6 +62,28 @@ export async function processFoodInput(params: ProcessFoodInputParams): Promise<
   }
 
   throw new Error("Invalid input parameters");
+}
+
+let dailyTotals = {
+  calories: 0,
+  protein: 0,
+  carbs: 0,
+  fats: 0
+};
+
+export function getDailyTotals() {
+  return dailyTotals;
+}
+
+export function addToDailyTotals(result: FoodInputResult) {
+  dailyTotals.calories += result.totalCalories;
+  dailyTotals.protein += result.totalProtein;
+  dailyTotals.carbs += result.totalCarbs;
+  dailyTotals.fats += result.totalFats;
+}
+
+export function resetDailyTotals() {
+  dailyTotals = { calories: 0, protein: 0, carbs: 0, fats: 0 };
 }
 
 async function processText(text: string): Promise<FoodInputResult> {
@@ -137,6 +169,17 @@ async function processBarcode(barcodeData: string): Promise<FoodInputResult> {
       const fiber = nutriments.fiber_100g ? Math.round(nutriments.fiber_100g * multiplier) : undefined;
       const sugar = nutriments.sugars_100g ? Math.round(nutriments.sugars_100g * multiplier) : undefined;
 
+      const minerals: any = {
+        sodium: nutriments.sodium_100g ? Math.round(nutriments.sodium_100g * 1000 * multiplier) : undefined, // to mg
+        potassium: nutriments.potassium_100g ? Math.round(nutriments.potassium_100g * 1000 * multiplier) : undefined,
+        calcium: nutriments.calcium_100g ? Math.round(nutriments.calcium_100g * 1000 * multiplier) : undefined,
+        magnesium: nutriments.magnesium_100g ? Math.round(nutriments.magnesium_100g * 1000 * multiplier) : undefined,
+        iron: nutriments.iron_100g ? Math.round(nutriments.iron_100g * 1000 * multiplier) : undefined,
+        zinc: nutriments.zinc_100g ? Math.round(nutriments.zinc_100g * 1000 * multiplier) : undefined,
+        phosphorus: nutriments.phosphorus_100g ? Math.round(nutriments.phosphorus_100g * 1000 * multiplier) : undefined,
+        selenium: nutriments.selenium_100g ? Math.round(nutriments.selenium_100g * 1000 * 1000 * multiplier) : undefined, // usually in mcg
+      };
+
       const result: FoodInputResult = {
         items: [
           {
@@ -147,6 +190,7 @@ async function processBarcode(barcodeData: string): Promise<FoodInputResult> {
             fats,
             fiber,
             sugar,
+            minerals,
             confidence: "high",
           },
         ],
@@ -174,7 +218,7 @@ export async function transcribeAudio(audioUri: string, fileType: string): Promi
 
   try {
     const formData = new FormData();
-    
+
     const audioFile = {
       uri: audioUri,
       name: `recording.${fileType}`,

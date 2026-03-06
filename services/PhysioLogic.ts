@@ -1,10 +1,10 @@
-import { 
-  Exercise, 
-  InjuryProfile, 
-  KneeInjuryType, 
+import {
+  Exercise,
+  InjuryProfile,
+  KneeInjuryType,
   RecoveryExercise,
   RecoveryCategory,
-  MuscleGroup 
+  MuscleGroup
 } from '@/types';
 import { MASTER_EXERCISE_DATABASE } from '@/constants/exerciseDatabase';
 import { RECOVERY_LIBRARY, getSafeExercisesForInjury } from '@/constants/recovery_seed';
@@ -19,30 +19,30 @@ const INJURY_CONTRAINDICATIONS: Record<KneeInjuryType, string[]> = {
 };
 
 const EXERCISE_RISK_TAGS: Record<string, string[]> = {
-  'jump-squats': ['impact', 'plyometric', 'deep_flexion'],
-  'box-jumps': ['impact', 'plyometric'],
+  'jump_squats': ['impact', 'plyometric', 'deep_flexion'],
+  'box_jumps': ['impact', 'plyometric'],
   'burpees': ['impact', 'deep_flexion'],
-  'walking-lunges': ['deep_flexion', 'balance_demand'],
-  'bulgarian-split-squat': ['deep_flexion', 'balance_demand'],
-  'squat-back': ['deep_flexion', 'high_load'],
-  'squat-front': ['deep_flexion', 'high_load'],
-  'shuttle-runs': ['lateral_pivot', 'cutting'],
-  'interval-sprints': ['impact', 'high_velocity'],
-  'jump-rope': ['impact', 'repetitive'],
+  'walking_lunges': ['deep_flexion', 'balance_demand'],
+  'bulgarian_split_squat': ['deep_flexion', 'balance_demand'],
+  'squat_barbell': ['deep_flexion', 'high_load'],
+  'squat_front': ['deep_flexion', 'high_load'],
+  'shuttle_run': ['lateral_pivot', 'cutting'],
+  'interval_sprints': ['impact', 'high_velocity'],
+  'jump_rope': ['impact', 'repetitive'],
 };
 
 const SAFE_ALTERNATIVES: Record<string, string[]> = {
-  'jump-squats': ['spanish-squat', 'squat-goblet', 'step-ups'],
-  'box-jumps': ['step-ups', 'glute-bridge', 'hip-thrusts'],
-  'burpees': ['dead-bugs', 'planks', 'glute-bridge-warmup'],
-  'walking-lunges': ['reverse-lunges', 'step-ups', 'glute-bridge'],
-  'bulgarian-split-squat': ['reverse-lunges', 'step-downs', 'slr-quad'],
-  'squat-back': ['squat-goblet', 'spanish-squat', 'hip-thrusts'],
-  'squat-front': ['squat-goblet', 'tke', 'step-downs'],
-  'shuttle-runs': ['incline-walks', 'assault-bike', 'band-walks'],
-  'interval-sprints': ['incline-walks', 'assault-bike', 'easy-run'],
-  'jump-rope': ['incline-walks', 'battle-ropes', 'assault-bike'],
-  'hamstring-curl': ['rdl', 'glute-bridge', 'good-mornings'],
+  'jump_squats': ['spanish-squat', 'squat_goblet', 'step-ups'],
+  'box_jumps': ['step-ups', 'glute-bridge', 'hip-thrusts'],
+  'burpees': ['dead_bug', 'plank', 'glute-bridge-warmup'],
+  'walking_lunges': ['reverse_lunges', 'step-ups', 'glute-bridge'],
+  'bulgarian_split_squat': ['reverse_lunges', 'step-downs', 'slr-quad'],
+  'squat_barbell': ['squat_goblet', 'spanish-squat', 'hip-thrusts'],
+  'squat_front': ['squat_goblet', 'tke', 'step-downs'],
+  'shuttle_run': ['incline_walks', 'assault-bike', 'band-walks'],
+  'interval_sprints': ['incline_walks', 'assault-bike', 'easy-run'],
+  'jump_rope': ['incline_walks', 'battle-ropes', 'assault-bike'],
+  'hamstring_curl': ['rdl', 'glute-bridge', 'good-mornings'],
   'deep-squat-hold': ['hip-cars', '90-90-stretch', 'ankle-dorsiflexion-drill'],
 };
 
@@ -63,9 +63,9 @@ export interface RoutineResult {
 export const PhysioLogic = {
   getSafeAlternatives(exerciseId: string, injury: InjuryProfile): AlternativeResult {
     console.log('[PhysioLogic] Getting safe alternatives for:', exerciseId, 'with injury:', injury.type);
-    
+
     const originalExercise = MASTER_EXERCISE_DATABASE.find(ex => ex.id === exerciseId);
-    
+
     if (!injury.active) {
       console.log('[PhysioLogic] Injury not active, returning original exercise');
       return {
@@ -78,8 +78,8 @@ export const PhysioLogic = {
 
     const exerciseRisks = EXERCISE_RISK_TAGS[exerciseId] || [];
     const injuryContraindications = INJURY_CONTRAINDICATIONS[injury.type] || [];
-    
-    const conflictingRisks = exerciseRisks.filter(risk => 
+
+    const conflictingRisks = exerciseRisks.filter(risk =>
       injuryContraindications.includes(risk)
     );
 
@@ -111,7 +111,7 @@ export const PhysioLogic = {
 
     if (injury.painLevel >= 6) {
       const rehabExercises = getSafeExercisesForInjury(injury.type);
-      const gentleAlternatives = rehabExercises.filter(ex => 
+      const gentleAlternatives = rehabExercises.filter(ex =>
         ex.impactLevel === 'NONE' && ex.tags.includes('isometric')
       );
       alternatives.push(...gentleAlternatives.slice(0, 2));
@@ -132,12 +132,12 @@ export const PhysioLogic = {
 
   getRoutine(type: 'WARMUP' | 'COOLDOWN' | 'MOBILITY', focus: string, injury?: InjuryProfile): RoutineResult {
     console.log('[PhysioLogic] Building routine:', type, 'with focus:', focus);
-    
+
     let exercises = RECOVERY_LIBRARY.filter(ex => ex.category === type);
 
     const focusMuscleGroups = getFocusMuscleGroups(focus);
     if (focusMuscleGroups.length > 0) {
-      exercises = exercises.filter(ex => 
+      exercises = exercises.filter(ex =>
         focusMuscleGroups.includes(ex.muscleGroup as MuscleGroup) ||
         ex.muscleGroup === 'full_body' ||
         ex.muscleGroup === 'lower_body' ||
@@ -178,12 +178,12 @@ export const PhysioLogic = {
 
   getRehabProtocol(injury: InjuryProfile): RoutineResult {
     console.log('[PhysioLogic] Building rehab protocol for:', injury.type);
-    
+
     let exercises = getSafeExercisesForInjury(injury.type);
 
     if (injury.painLevel >= 7) {
-      exercises = exercises.filter(ex => 
-        ex.impactLevel === 'NONE' && 
+      exercises = exercises.filter(ex =>
+        ex.impactLevel === 'NONE' &&
         (ex.tags.includes('isometric') || ex.tags.includes('gentle'))
       );
     } else if (injury.painLevel >= 4) {
@@ -214,8 +214,8 @@ export const PhysioLogic = {
   } {
     const exerciseRisks = EXERCISE_RISK_TAGS[exerciseId] || [];
     const injuryContraindications = INJURY_CONTRAINDICATIONS[injury.type] || [];
-    
-    const conflicts = exerciseRisks.filter(risk => 
+
+    const conflicts = exerciseRisks.filter(risk =>
       injuryContraindications.includes(risk)
     );
 
@@ -268,8 +268,8 @@ export const PhysioLogic = {
 };
 
 function calculateSafetyScore(
-  exerciseId: string, 
-  injury: InjuryProfile, 
+  exerciseId: string,
+  injury: InjuryProfile,
   conflicts: string[]
 ): number {
   let score = 100;
@@ -289,8 +289,8 @@ function calculateSafetyScore(
 }
 
 function generateReason(
-  injury: InjuryProfile, 
-  conflicts: string[], 
+  injury: InjuryProfile,
+  conflicts: string[],
   exerciseId: string
 ): string {
   if (conflicts.length === 0) {
@@ -307,7 +307,7 @@ function generateReason(
   };
 
   const riskNames = conflicts.map(c => riskDescriptions[c] || c).join(' and ');
-  
+
   return `This exercise involves ${riskNames}, which may aggravate ${injury.type.replace(/_/g, ' ').toLowerCase()}. Consider the alternatives below.`;
 }
 
@@ -326,7 +326,7 @@ function getFocusMuscleGroups(focus: string): MuscleGroup[] {
 }
 
 function selectRoutineExercises(
-  exercises: RecoveryExercise[], 
+  exercises: RecoveryExercise[],
   type: RecoveryCategory
 ): RecoveryExercise[] {
   const targetCounts: Record<string, number> = {
@@ -337,13 +337,13 @@ function selectRoutineExercises(
   };
 
   const target = targetCounts[type] || 4;
-  
+
   const muscleGroups = new Set<string>();
   const selected: RecoveryExercise[] = [];
 
   for (const exercise of exercises) {
     if (selected.length >= target) break;
-    
+
     if (!muscleGroups.has(exercise.muscleGroup)) {
       selected.push(exercise);
       muscleGroups.add(exercise.muscleGroup);
@@ -361,7 +361,7 @@ function selectRoutineExercises(
 }
 
 function generateRoutineInstructions(
-  type: RecoveryCategory, 
+  type: RecoveryCategory,
   focus: string,
   injury?: InjuryProfile
 ): string {
@@ -392,7 +392,7 @@ function generateRehabInstructions(injury: InjuryProfile): string {
   };
 
   let instructions = phaseInstructions[injury.type] || phaseInstructions['GENERAL_PAIN'];
-  
+
   if (injury.painLevel >= 6) {
     instructions += ' Current pain level is elevated - focus on gentle exercises only.';
   }

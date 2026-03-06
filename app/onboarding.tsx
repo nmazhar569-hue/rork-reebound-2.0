@@ -7,7 +7,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -15,9 +14,12 @@ import {
   Dimensions,
 } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
-import colors from '@/constants/colors';
+import { VoidBackground } from '@/components/VoidBackground';
+import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
+import { ReeOnboardingHeader } from '@/components/onboarding/ReeOnboardingHeader';
+import { haptics } from '@/utils/haptics';
 import * as Haptics from 'expo-haptics';
-import { 
+import {
   QuestionnaireProfile,
   PrimaryGoal,
   DesiredOutcomeFocus,
@@ -55,7 +57,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'preferredName',
     section: 'Identity',
-    sectionIcon: <User size={18} color={colors.primary} />,
+    sectionIcon: <User size={18} color={liquidGlass.accent.primary} />,
     question: 'How would you like us to refer to you?',
     subtitle: 'This helps us personalize your experience.',
     type: 'text',
@@ -64,7 +66,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'age',
     section: 'Identity',
-    sectionIcon: <User size={18} color={colors.primary} />,
+    sectionIcon: <User size={18} color={liquidGlass.accent.primary} />,
     question: 'How old are you?',
     subtitle: 'This helps us tailor recommendations to your life stage.',
     type: 'number',
@@ -73,7 +75,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'biologicalSex',
     section: 'Identity',
-    sectionIcon: <User size={18} color={colors.primary} />,
+    sectionIcon: <User size={18} color={liquidGlass.accent.primary} />,
     question: 'Biological sex (for health calculations)?',
     subtitle: 'Used only for metabolic and recovery estimates.',
     type: 'single',
@@ -86,7 +88,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'primaryGoals',
     section: 'Goals',
-    sectionIcon: <Target size={18} color={colors.primary} />,
+    sectionIcon: <Target size={18} color={liquidGlass.accent.primary} />,
     question: 'What are you here to work on right now?',
     subtitle: 'Select up to 3 that feel most important.',
     type: 'multi',
@@ -105,7 +107,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'desiredOutcomeFocus',
     section: 'Goals',
-    sectionIcon: <Target size={18} color={colors.primary} />,
+    sectionIcon: <Target size={18} color={liquidGlass.accent.primary} />,
     question: 'If everything went perfectly, what would change first?',
     subtitle: 'What matters most to you right now?',
     type: 'single',
@@ -120,7 +122,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'fitnessLevel',
     section: 'Current State',
-    sectionIcon: <Dumbbell size={18} color={colors.primary} />,
+    sectionIcon: <Dumbbell size={18} color={liquidGlass.accent.primary} />,
     question: 'How would you describe your current fitness level?',
     type: 'single',
     options: [
@@ -133,7 +135,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'trainingFrequencyCurrent',
     section: 'Current State',
-    sectionIcon: <Dumbbell size={18} color={colors.primary} />,
+    sectionIcon: <Dumbbell size={18} color={liquidGlass.accent.primary} />,
     question: 'How often do you currently train?',
     type: 'single',
     options: [
@@ -146,7 +148,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'limitationsNotes',
     section: 'Current State',
-    sectionIcon: <Dumbbell size={18} color={colors.primary} />,
+    sectionIcon: <Dumbbell size={18} color={liquidGlass.accent.primary} />,
     question: 'Any injuries, limitations, or conditions we should respect?',
     subtitle: 'This helps us avoid suggesting movements that might not work for you.',
     type: 'textarea',
@@ -157,7 +159,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'nutritionStructureLevel',
     section: 'Nutrition',
-    sectionIcon: <Utensils size={18} color={colors.primary} />,
+    sectionIcon: <Utensils size={18} color={liquidGlass.accent.primary} />,
     question: 'How would you describe your current nutrition habits?',
     type: 'single',
     options: [
@@ -170,7 +172,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'dietaryConstraints',
     section: 'Nutrition',
-    sectionIcon: <Utensils size={18} color={colors.primary} />,
+    sectionIcon: <Utensils size={18} color={liquidGlass.accent.primary} />,
     question: 'Any dietary preferences or restrictions?',
     subtitle: 'Select all that apply.',
     type: 'multi',
@@ -188,7 +190,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'timeCommitment',
     section: 'Lifestyle',
-    sectionIcon: <Clock size={18} color={colors.primary} />,
+    sectionIcon: <Clock size={18} color={liquidGlass.accent.primary} />,
     question: 'How much time can you realistically commit most weeks?',
     subtitle: 'Be honest — we will work with what you have.',
     type: 'single',
@@ -202,7 +204,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'frictionPoints',
     section: 'Lifestyle',
-    sectionIcon: <Clock size={18} color={colors.primary} />,
+    sectionIcon: <Clock size={18} color={liquidGlass.accent.primary} />,
     question: 'What usually gets in your way?',
     subtitle: 'Understanding your obstacles helps us support you better.',
     type: 'multi',
@@ -219,7 +221,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'motivationDrivers',
     section: 'Style',
-    sectionIcon: <Heart size={18} color={colors.primary} />,
+    sectionIcon: <Heart size={18} color={liquidGlass.accent.primary} />,
     question: 'What helps you stay consistent?',
     subtitle: 'Select what resonates with you.',
     type: 'multi',
@@ -235,7 +237,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'reePersonalityPreference',
     section: 'Style',
-    sectionIcon: <Heart size={18} color={colors.primary} />,
+    sectionIcon: <Heart size={18} color={liquidGlass.accent.primary} />,
     question: 'How do you want Ree to show up for you?',
     subtitle: 'Ree is your companion in this app.',
     type: 'single',
@@ -249,7 +251,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'baselineSleep',
     section: 'Recovery Baselines',
-    sectionIcon: <Moon size={18} color={colors.primary} />,
+    sectionIcon: <Moon size={18} color={liquidGlass.accent.primary} />,
     question: 'How much sleep do you usually get?',
     subtitle: 'This helps us detect when you\'re under-recovered.',
     type: 'single',
@@ -264,7 +266,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'baselineHrv',
     section: 'Recovery Baselines',
-    sectionIcon: <Activity size={18} color={colors.primary} />,
+    sectionIcon: <Activity size={18} color={liquidGlass.accent.primary} />,
     question: 'Do you know your typical HRV?',
     subtitle: 'If you use a smartwatch, this helps us gauge CNS fatigue. Skip if unsure.',
     type: 'single',
@@ -280,7 +282,7 @@ const QUESTIONS: QuestionConfig[] = [
   {
     id: 'confirmation',
     section: 'Confirmation',
-    sectionIcon: <Check size={18} color={colors.primary} />,
+    sectionIcon: <Check size={18} color={liquidGlass.accent.primary} />,
     question: 'Does this feel accurate for where you are right now?',
     subtitle: 'You can always refine this later in your profile.',
     type: 'single',
@@ -302,35 +304,35 @@ export default function OnboardingScreen() {
     motivationDrivers: [],
   });
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
-  
+  const [reeMessage, setReeMessage] = useState("Let's start with the basics. How should I address you?");
+
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   const currentQuestion = QUESTIONS[currentQuestionIndex];
-  
 
   const animateTransition = useCallback((direction: 'next' | 'prev', callback: () => void) => {
     const toValue = direction === 'next' ? -SCREEN_WIDTH : SCREEN_WIDTH;
-    
+
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 150,
+        duration: 200,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
-        toValue: toValue * 0.3,
-        duration: 150,
+        toValue: toValue * 0.2,
+        duration: 200,
         useNativeDriver: true,
       }),
     ]).start(() => {
       callback();
-      slideAnim.setValue(direction === 'next' ? SCREEN_WIDTH * 0.3 : -SCREEN_WIDTH * 0.3);
+      slideAnim.setValue(direction === 'next' ? SCREEN_WIDTH * 0.2 : -SCREEN_WIDTH * 0.2);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
@@ -352,22 +354,90 @@ export default function OnboardingScreen() {
     }).start();
   }, [progressAnim]);
 
+  const updateReeMessage = useCallback((nextIndex: number, currentAnswers: any) => {
+    const nextQ = QUESTIONS[nextIndex];
+    let msg = "";
+
+    // Dynamic logic based on previous answers or current step
+    switch (nextQ.id) {
+      case 'age':
+        msg = `Nice to meet you, ${currentAnswers.preferredName || 'there'}. How old are you?`;
+        break;
+      case 'biologicalSex':
+        msg = "Got it. This helps me estimate your recovery needs.";
+        break;
+      case 'primaryGoals':
+        msg = "Now, what's driving you? Pick what matters most.";
+        break;
+      case 'desiredOutcomeFocus':
+        const goals = currentAnswers.primaryGoals || [];
+        if (goals.includes('build_muscle')) msg = "Muscle building—solid goal. We'll focus on strength and hypertrophy.";
+        else if (goals.includes('lose_fat')) msg = "Fat loss—we'll balance nutrition and training for this.";
+        else msg = "Solid goals. Now, what does success look like to you?";
+        break;
+      case 'fitnessLevel':
+        msg = "Knowing your history helps me pace your first week.";
+        break;
+      case 'trainingFrequencyCurrent':
+        const level = currentAnswers.fitnessLevel;
+        if (level === 'beginner') msg = "Everyone starts somewhere. We'll build a strong foundation.";
+        else if (level === 'advanced') msg = "Advanced lifter. We'll focus on periodization.";
+        else msg = "Consistency is key. How often are you training now?";
+        break;
+      case 'limitationsNotes':
+        msg = "Safety first. Any injuries or limits I should know about?";
+        break;
+      case 'nutritionStructureLevel':
+        msg = "Nutrition fuels performance. How are you eating currently?";
+        break;
+      case 'dietaryConstraints':
+        msg = "I can adapt meal suggestions to any preference.";
+        break;
+      case 'timeCommitment':
+        msg = "Let's make this fit your schedule, not the other way around.";
+        break;
+      case 'frictionPoints':
+        msg = "Knowing your obstacles helps me help you overcome them.";
+        break;
+      case 'motivationDrivers':
+        msg = "What keeps you going when things get tough?";
+        break;
+      case 'reePersonalityPreference':
+        msg = "I'm your companion. How do you want me to show up?";
+        break;
+      case 'baselineSleep':
+        msg = "Recovery is half the battle. How do you usually sleep?";
+        break;
+      case 'baselineHrv':
+        msg = "HRV gives us a window into your nervous system. Skip if unsure.";
+        break;
+      case 'confirmation':
+        msg = "Almost there. Does this look right?";
+        break;
+      default:
+        msg = nextQ.subtitle || "Tell me a bit more.";
+    }
+    setReeMessage(msg);
+  }, []);
+
   const handleNext = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+    haptics.light();
+
     if (currentQuestionIndex < QUESTIONS.length - 1) {
       animateTransition('next', () => {
+        const nextIndex = currentQuestionIndex + 1;
         setCurrentQuestionIndex(prev => Math.min(prev + 1, QUESTIONS.length - 1));
         animateProgress((currentQuestionIndex + 2) / TOTAL_QUESTIONS);
+        updateReeMessage(nextIndex, answers);
       });
     } else {
       setPhase('ree_intro');
     }
-  }, [currentQuestionIndex, animateTransition, animateProgress]);
+  }, [currentQuestionIndex, animateTransition, animateProgress, answers, updateReeMessage]);
 
   const handleBack = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+    haptics.light();
+
     if (currentQuestionIndex > 0) {
       animateTransition('prev', () => {
         setCurrentQuestionIndex(prev => prev - 1);
@@ -379,15 +449,15 @@ export default function OnboardingScreen() {
   }, [currentQuestionIndex, animateTransition, animateProgress]);
 
   const handleSkip = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.light();
     handleNext();
   }, [handleNext]);
 
   const handleSingleSelect = useCallback((value: string) => {
     if (!currentQuestion) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.light();
     setAnswers(prev => ({ ...prev, [currentQuestion.id]: value }));
-    
+
     setTimeout(() => {
       handleNext();
     }, 300);
@@ -395,18 +465,18 @@ export default function OnboardingScreen() {
 
   const handleMultiSelect = useCallback((value: string) => {
     if (!currentQuestion) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+    haptics.light();
+
     setAnswers(prev => {
       const current = (prev[currentQuestion.id] as string[]) || [];
       const maxSelections = currentQuestion.maxSelections;
-      
+
       if (value === 'none') {
         return { ...prev, [currentQuestion.id]: ['none'] };
       }
-      
+
       const withoutNone = current.filter(v => v !== 'none');
-      
+
       if (withoutNone.includes(value)) {
         return { ...prev, [currentQuestion.id]: withoutNone.filter(v => v !== value) };
       } else {
@@ -434,7 +504,7 @@ export default function OnboardingScreen() {
   const canProceed = useCallback(() => {
     if (!currentQuestion) return false;
     const answer = answers[currentQuestion.id];
-    
+
     if (currentQuestion.skippable) return true;
     if (currentQuestion.type === 'multi') {
       return Array.isArray(answer) && answer.length > 0;
@@ -449,8 +519,8 @@ export default function OnboardingScreen() {
   }, [answers, currentQuestion]);
 
   const handleComplete = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
+    haptics.success();
+
     const questionnaireProfile: QuestionnaireProfile = {
       preferredName: answers.preferredName as string | undefined,
       age: typeof answers.age === 'number' ? answers.age : undefined,
@@ -470,7 +540,7 @@ export default function OnboardingScreen() {
     };
 
     const hasInjury = !!answers.limitationsNotes && (answers.limitationsNotes as string).toLowerCase().includes('knee');
-    
+
     const baselineSleep = answers.baselineSleep ? parseFloat(answers.baselineSleep as string) : 7.5;
     const baselineHrv = answers.baselineHrv ? parseInt(answers.baselineHrv as string, 10) : 50;
 
@@ -505,8 +575,8 @@ export default function OnboardingScreen() {
   };
 
   const handleSkipOnboarding = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
+    haptics.light();
+
     const defaultProfile: UserProfile = {
       injuryType: 'general_pain',
       painTolerance: 'medium',
@@ -534,72 +604,70 @@ export default function OnboardingScreen() {
   };
 
   const renderWelcome = () => (
-    <Animated.View style={styles.welcomeContainer}>
-      <TouchableOpacity 
+    <View style={styles.welcomeContainer}>
+      <TouchableOpacity
         style={styles.skipOnboardingButton}
         onPress={handleSkipOnboarding}
-        activeOpacity={0.7}
       >
         <Text style={styles.skipOnboardingText}>Skip</Text>
       </TouchableOpacity>
-      
+
       <View style={styles.welcomeContent}>
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Sparkles size={32} color={colors.surface} />
+          <View style={[styles.logoCircle, { backgroundColor: liquidGlass.accent.primary }]}>
+            <Dumbbell size={40} color={liquidGlass.text.inverse} />
           </View>
         </View>
-        
-        <Text style={styles.welcomeTitle}>Welcome to Reebound</Text>
+
+        <Text style={styles.welcomeTitle}>Welcome</Text>
         <Text style={styles.welcomeSubtitle}>
-          Movement + recovery, built around you.
+          Personalized training + recovery, built around you.
         </Text>
-        
+
         <View style={styles.welcomeFeatures}>
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
-              <Target size={20} color={colors.primary} />
+              <Target size={20} color={liquidGlass.accent.primary} />
             </View>
             <Text style={styles.featureText}>Understand your goals</Text>
           </View>
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
-              <Dumbbell size={20} color={colors.primary} />
+              <Dumbbell size={20} color={liquidGlass.accent.primary} />
             </View>
             <Text style={styles.featureText}>Personalized approach</Text>
           </View>
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
-              <Heart size={20} color={colors.primary} />
+              <Heart size={20} color={liquidGlass.accent.primary} />
             </View>
             <Text style={styles.featureText}>Adaptive to your life</Text>
           </View>
         </View>
 
         <Text style={styles.welcomeNote}>
-          A few quick questions to get started.{'\n'}Takes about 3 minutes.
+          Let's set up your profile to optimize your results.{'\n'}Takes about 3 minutes.
         </Text>
       </View>
 
-      <TouchableOpacity 
-        style={styles.primaryButton} 
+      <TouchableOpacity
+        style={styles.primaryActionBtn}
         onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          haptics.medium();
           setPhase('questionnaire');
           animateProgress(1 / TOTAL_QUESTIONS);
         }}
-        activeOpacity={0.8}
       >
-        <Text style={styles.primaryButtonText}>Let&apos;s Begin</Text>
-        <ChevronRight size={20} color={colors.surface} />
+        <Text style={styles.primaryActionText}>Get Started</Text>
+        <ChevronRight size={20} color={liquidGlass.text.inverse} />
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
       <View style={styles.progressTrack}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.progressFill,
             {
@@ -608,7 +676,7 @@ export default function OnboardingScreen() {
                 outputRange: ['0%', '100%'],
               }),
             },
-          ]} 
+          ]}
         />
       </View>
       <Text style={styles.progressText}>{currentQuestionIndex + 1} of {TOTAL_QUESTIONS}</Text>
@@ -617,9 +685,9 @@ export default function OnboardingScreen() {
 
   const renderQuestion = () => {
     const answer = answers[currentQuestion.id];
-    
+
     return (
-      <Animated.View 
+      <Animated.View
         style={[
           styles.questionContainer,
           {
@@ -630,16 +698,19 @@ export default function OnboardingScreen() {
       >
         <View style={styles.sectionBadge}>
           {currentQuestion.sectionIcon}
-          <Text style={styles.sectionLabel}>{currentQuestion.section}</Text>
+          <Text style={styles.sectionLabel}>{currentQuestion.section.toUpperCase()}</Text>
         </View>
-        
+
+        {/* Ree Header Added Here */}
+        <ReeOnboardingHeader message={reeMessage} />
+
         <Text style={styles.questionText}>{currentQuestion.question}</Text>
         {currentQuestion.subtitle && (
           <Text style={styles.questionSubtitle}>{currentQuestion.subtitle}</Text>
         )}
 
-        <ScrollView 
-          style={styles.optionsScroll} 
+        <ScrollView
+          style={styles.optionsScroll}
           contentContainerStyle={styles.optionsContent}
           showsVerticalScrollIndicator={false}
         >
@@ -647,7 +718,7 @@ export default function OnboardingScreen() {
             <TextInput
               style={styles.textInput}
               placeholder={currentQuestion.placeholder}
-              placeholderTextColor={colors.textTertiary}
+              placeholderTextColor={liquidGlass.text.tertiary}
               value={(answer as string) || ''}
               onChangeText={handleTextChange}
               autoFocus
@@ -658,7 +729,7 @@ export default function OnboardingScreen() {
             <TextInput
               style={styles.numberInput}
               placeholder={currentQuestion.placeholder}
-              placeholderTextColor={colors.textTertiary}
+              placeholderTextColor={liquidGlass.text.tertiary}
               value={answer !== undefined ? String(answer) : ''}
               onChangeText={handleNumberChange}
               keyboardType="number-pad"
@@ -670,7 +741,7 @@ export default function OnboardingScreen() {
             <TextInput
               style={styles.textareaInput}
               placeholder={currentQuestion.placeholder}
-              placeholderTextColor={colors.textTertiary}
+              placeholderTextColor={liquidGlass.text.tertiary}
               value={(answer as string) || ''}
               onChangeText={handleTextChange}
               multiline
@@ -687,7 +758,6 @@ export default function OnboardingScreen() {
                 answer === option.value && styles.optionCardSelected,
               ]}
               onPress={() => handleSingleSelect(option.value)}
-              activeOpacity={0.7}
             >
               <View style={styles.optionContent}>
                 <Text style={[
@@ -710,7 +780,7 @@ export default function OnboardingScreen() {
                 answer === option.value && styles.optionRadioSelected,
               ]}>
                 {answer === option.value && (
-                  <Check size={14} color={colors.surface} />
+                  <Check size={14} color="#000" strokeWidth={3} />
                 )}
               </View>
             </TouchableOpacity>
@@ -726,7 +796,6 @@ export default function OnboardingScreen() {
                   selected && styles.optionCardSelected,
                 ]}
                 onPress={() => handleMultiSelect(option.value)}
-                activeOpacity={0.7}
               >
                 <View style={styles.optionContent}>
                   <Text style={[
@@ -748,7 +817,7 @@ export default function OnboardingScreen() {
                   styles.optionCheckbox,
                   selected && styles.optionCheckboxSelected,
                 ]}>
-                  {selected && <Check size={14} color={colors.surface} />}
+                  {selected && <Check size={14} color="#000" strokeWidth={3} />}
                 </View>
               </TouchableOpacity>
             );
@@ -760,40 +829,37 @@ export default function OnboardingScreen() {
 
   const renderQuestionNavigation = () => (
     <View style={styles.navigationContainer}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.backButton}
         onPress={handleBack}
-        activeOpacity={0.7}
       >
-        <ChevronLeft size={20} color={colors.textSecondary} />
+        <ChevronLeft size={20} color={liquidGlass.text.secondary} />
         <Text style={styles.backButtonText}>Back</Text>
       </TouchableOpacity>
 
       <View style={styles.navRight}>
         {currentQuestion.skippable && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.skipButton}
             onPress={handleSkip}
-            activeOpacity={0.7}
           >
             <Text style={styles.skipButtonText}>{currentQuestion.skipText || 'Skip'}</Text>
           </TouchableOpacity>
         )}
 
         {(currentQuestion.type === 'text' || currentQuestion.type === 'number' || currentQuestion.type === 'textarea' || currentQuestion.type === 'multi') && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.nextButton,
               !canProceed() && styles.nextButtonDisabled,
             ]}
             onPress={handleNext}
             disabled={!canProceed()}
-            activeOpacity={0.8}
           >
             <Text style={styles.nextButtonText}>
               {currentQuestionIndex === QUESTIONS.length - 1 ? 'Finish' : 'Continue'}
             </Text>
-            <ChevronRight size={18} color={colors.surface} />
+            <ChevronRight size={18} color={liquidGlass.text.inverse} />
           </TouchableOpacity>
         )}
       </View>
@@ -804,64 +870,74 @@ export default function OnboardingScreen() {
     <View style={styles.reeIntroContainer}>
       <View style={styles.reeIntroContent}>
         <View style={styles.reeAvatarLarge}>
-          <Sparkles size={40} color={colors.surface} />
+          <Sparkles size={44} color={liquidGlass.text.inverse} />
         </View>
-        
-        <Text style={styles.reeIntroTitle}>Thanks — I have got a clear picture now.</Text>
+
+        <Text style={styles.reeIntroTitle}>All systems clear.</Text>
         <Text style={styles.reeIntroSubtitle}>
-          Let&apos;s build this around you.
+          I've calibrated your profile.
         </Text>
 
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>What I learned:</Text>
-          
-          {answers.preferredName && (
-            <Text style={styles.summaryItem}>
-              • I will call you {answers.preferredName as string}
-            </Text>
-          )}
-          
-          {(answers.primaryGoals as string[])?.length > 0 && (
-            <Text style={styles.summaryItem}>
-              • Your focus: {(answers.primaryGoals as string[]).map(g => 
-                g.replace(/_/g, ' ')
-              ).slice(0, 2).join(', ')}
-            </Text>
-          )}
-          
-          {answers.fitnessLevel && (
-            <Text style={styles.summaryItem}>
-              • Level: {(answers.fitnessLevel as string).replace(/_/g, ' ')}
-            </Text>
-          )}
-          
-          {answers.timeCommitment && (
-            <Text style={styles.summaryItem}>
-              • Time: {answers.timeCommitment as string} per week
-            </Text>
-          )}
+          <Text style={styles.summaryTitle}>PROFILE SUMMARY</Text>
 
-          {answers.reePersonalityPreference && (
-            <Text style={styles.summaryItem}>
-              • I will be {answers.reePersonalityPreference === 'coach' ? 'direct & structured' : 
-                answers.reePersonalityPreference === 'supportive' ? 'warm & encouraging' :
-                answers.reePersonalityPreference === 'minimal' ? 'quiet & available' : 'data-focused'}
-            </Text>
-          )}
+          <View style={styles.summaryList}>
+            {answers.preferredName && (
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryDot} />
+                <Text style={styles.summaryText}>
+                  Calibrated for <Text style={styles.summaryHighlight}>{answers.preferredName as string}</Text>
+                </Text>
+              </View>
+            )}
+
+            {(answers.primaryGoals as string[])?.length > 0 && (
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryDot} />
+                <Text style={styles.summaryText}>
+                  Focusing on <Text style={styles.summaryHighlight}>{(answers.primaryGoals as string[]).map(g => g.replace(/_/g, ' ')).slice(0, 2).join(' & ')}</Text>
+                </Text>
+              </View>
+            )}
+
+            {answers.fitnessLevel && (
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryDot} />
+                <Text style={styles.summaryText}>
+                  Status: <Text style={styles.summaryHighlight}>{(answers.fitnessLevel as string).replace(/_/g, ' ')}</Text>
+                </Text>
+              </View>
+            )}
+
+            {answers.reePersonalityPreference && (
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryDot} />
+                <Text style={styles.summaryText}>
+                  Voice: <Text style={styles.summaryHighlight}>{
+                    answers.reePersonalityPreference === 'coach' ? 'Direct & Structured' :
+                      answers.reePersonalityPreference === 'supportive' ? 'Encouraging' :
+                        answers.reePersonalityPreference === 'minimal' ? 'Minimal' : 'Data-Focused'
+                  }</Text>
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <Text style={styles.reeIntroNote}>
-          Everything adapts as you go.{'\n'}This is just the starting point.
+          You can refine these levels at any time in your command center.
         </Text>
       </View>
 
-      <TouchableOpacity 
-        style={styles.primaryButton}
-        onPress={() => setPhase('disclaimer')}
-        activeOpacity={0.8}
+      <TouchableOpacity
+        style={styles.primaryActionBtn}
+        onPress={() => {
+          haptics.medium();
+          setPhase('disclaimer');
+        }}
       >
-        <Text style={styles.primaryButtonText}>Continue</Text>
-        <ChevronRight size={20} color={colors.surface} />
+        <Text style={styles.primaryActionText}>Final Step</Text>
+        <ChevronRight size={20} color={liquidGlass.text.inverse} />
       </TouchableOpacity>
     </View>
   );
@@ -870,11 +946,11 @@ export default function OnboardingScreen() {
     <View style={styles.disclaimerContainer}>
       <View style={styles.disclaimerContent}>
         <View style={styles.disclaimerIconWrapper}>
-          <ShieldAlert size={36} color={colors.primary} />
+          <ShieldAlert size={40} color={liquidGlass.status.warning} />
         </View>
-        
-        <Text style={styles.disclaimerTitle}>One Last Thing</Text>
-        
+
+        <Text style={styles.disclaimerTitle}>Safety Protocol</Text>
+
         <View style={styles.disclaimerBox}>
           <Text style={styles.disclaimerText}>
             Reebound provides general fitness guidance and is not a substitute for medical advice, diagnosis, or treatment.
@@ -884,57 +960,59 @@ export default function OnboardingScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.checkboxContainer}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            haptics.light();
             setDisclaimerAccepted(!disclaimerAccepted);
           }}
+          activeOpacity={0.8}
         >
           <View style={[styles.checkbox, disclaimerAccepted && styles.checkboxChecked]}>
-            {disclaimerAccepted && <Check size={16} color={colors.surface} />}
+            {disclaimerAccepted && <Check size={16} color="#000" strokeWidth={3} />}
           </View>
-          <Text style={styles.checkboxLabel}>I understand and accept</Text>
+          <Text style={styles.checkboxLabel}>I understand and accept the above</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity 
-        style={[styles.primaryButton, !disclaimerAccepted && styles.disabledButton]}
+      <TouchableOpacity
+        style={[styles.primaryActionBtn, !disclaimerAccepted && styles.disabledButton]}
         onPress={handleComplete}
         disabled={!disclaimerAccepted}
       >
-        <Text style={styles.primaryButtonText}>BEGIN MY JOURNEY</Text>
+        <Text style={styles.primaryActionText}>COMMAND START</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        {phase === 'welcome' && renderWelcome()}
-        
-        {phase === 'questionnaire' && (
-          <View style={styles.questionnaireContainer}>
-            {renderProgressBar()}
-            {renderQuestion()}
-            {renderQuestionNavigation()}
-          </View>
-        )}
-        
-        {phase === 'ree_intro' && renderReeIntro()}
-        {phase === 'disclaimer' && renderDisclaimer()}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <VoidBackground>
+      <View style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          {phase === 'welcome' && renderWelcome()}
+
+          {phase === 'questionnaire' && (
+            <View style={styles.questionnaireContainer}>
+              {renderProgressBar()}
+              {renderQuestion()}
+              {renderQuestionNavigation()}
+            </View>
+          )}
+
+          {phase === 'ree_intro' && renderReeIntro()}
+          {phase === 'disclaimer' && renderDisclaimer()}
+        </KeyboardAvoidingView>
+      </View>
+    </VoidBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -942,17 +1020,22 @@ const styles = StyleSheet.create({
   welcomeContainer: {
     flex: 1,
     padding: 24,
+    paddingTop: glassLayout.screenPaddingTop,
     justifyContent: 'space-between',
   },
   skipOnboardingButton: {
     alignSelf: 'flex-end',
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
+    backgroundColor: liquidGlass.surface.glass,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: liquidGlass.border.glass,
   },
   skipOnboardingText: {
-    fontSize: 15,
-    color: colors.textTertiary,
-    fontWeight: '500' as const,
+    fontSize: 14,
+    color: liquidGlass.text.tertiary,
+    fontWeight: '600' as const,
   },
   welcomeContent: {
     flex: 1,
@@ -960,282 +1043,282 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: liquidGlass.accent.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    ...glassShadows.glow,
   },
   welcomeTitle: {
-    fontSize: 28,
-    fontWeight: '700' as const,
-    color: colors.text,
-    marginBottom: 8,
+    fontSize: 32,
+    fontWeight: '800' as const,
+    color: liquidGlass.text.primary,
+    marginBottom: 12,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   welcomeSubtitle: {
-    fontSize: 17,
-    color: colors.textSecondary,
+    fontSize: 18,
+    color: liquidGlass.text.secondary,
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 48,
+    lineHeight: 26,
   },
   welcomeFeatures: {
     width: '100%',
-    gap: 16,
-    marginBottom: 40,
+    gap: 12,
+    marginBottom: 48,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingVertical: 16,
+    backgroundColor: liquidGlass.surface.card,
+    paddingVertical: 18,
     paddingHorizontal: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: liquidGlass.border.glass,
+    ...glassShadows.soft,
   },
   featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.primaryMuted,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: liquidGlass.accent.muted,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
   },
   featureText: {
-    fontSize: 16,
-    color: colors.text,
-    fontWeight: '500' as const,
+    fontSize: 17,
+    color: liquidGlass.text.primary,
+    fontWeight: '600' as const,
   },
   welcomeNote: {
     fontSize: 14,
-    color: colors.textTertiary,
+    color: liquidGlass.text.tertiary,
     textAlign: 'center',
     lineHeight: 22,
   },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 30,
+  primaryActionBtn: {
+    backgroundColor: liquidGlass.accent.primary,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
+    gap: 10,
+    marginBottom: 20,
   },
-  primaryButtonText: {
-    fontSize: 16,
+  primaryActionText: {
+    fontSize: 18,
     fontWeight: '700' as const,
-    color: colors.surface,
+    color: liquidGlass.text.inverse,
     letterSpacing: 0.5,
   },
   disabledButton: {
-    backgroundColor: colors.textTertiary,
-    shadowOpacity: 0,
+    backgroundColor: liquidGlass.text.tertiary,
+    opacity: 0.5,
   },
   questionnaireContainer: {
     flex: 1,
   },
   progressContainer: {
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: glassLayout.screenPaddingTop,
     paddingBottom: 8,
   },
   progressTrack: {
-    height: 4,
-    backgroundColor: colors.borderLight,
-    borderRadius: 2,
+    height: 5,
+    backgroundColor: liquidGlass.border.glassLight,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 2,
+    backgroundColor: liquidGlass.accent.primary,
   },
   progressText: {
-    fontSize: 13,
-    color: colors.textTertiary,
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.tertiary,
     textAlign: 'center',
+    letterSpacing: 1,
   },
   questionContainer: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingTop: 32,
   },
   sectionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: colors.primaryMuted,
+    backgroundColor: liquidGlass.accent.muted,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
     marginBottom: 20,
-    gap: 6,
+    gap: 8,
   },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800' as const,
+    color: liquidGlass.accent.primary,
+    letterSpacing: 1,
   },
   questionText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700' as const,
-    color: colors.text,
-    marginBottom: 8,
-    lineHeight: 32,
+    color: liquidGlass.text.primary,
+    marginBottom: 10,
+    lineHeight: 36,
+    letterSpacing: -0.8,
   },
   questionSubtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginBottom: 24,
-    lineHeight: 22,
+    fontSize: 16,
+    color: liquidGlass.text.secondary,
+    marginBottom: 32,
+    lineHeight: 24,
   },
   optionsScroll: {
     flex: 1,
   },
   optionsContent: {
-    paddingBottom: 20,
+    paddingBottom: 40,
     gap: 12,
   },
   textInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.card,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    fontSize: 17,
-    color: colors.text,
+    borderColor: liquidGlass.border.glass,
+    borderRadius: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
+    fontSize: 18,
+    color: liquidGlass.text.primary,
   },
   numberInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.card,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    fontSize: 24,
-    fontWeight: '600' as const,
-    color: colors.text,
+    borderColor: liquidGlass.border.glass,
+    borderRadius: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    fontSize: 32,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
     textAlign: 'center',
-    width: 120,
+    width: 140,
     alignSelf: 'center',
   },
   textareaInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.card,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: colors.text,
-    minHeight: 120,
+    borderColor: liquidGlass.border.glass,
+    borderRadius: 20,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
+    fontSize: 17,
+    color: liquidGlass.text.primary,
+    minHeight: 140,
   },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.card,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    borderColor: liquidGlass.border.glass,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    ...glassShadows.soft,
   },
   optionCardSelected: {
-    backgroundColor: colors.primaryMuted,
-    borderColor: colors.primary,
+    backgroundColor: 'rgba(45, 212, 191, 0.08)',
+    borderColor: liquidGlass.accent.primary,
   },
   optionContent: {
     flex: 1,
   },
   optionLabel: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginBottom: 2,
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: liquidGlass.text.primary,
+    marginBottom: 4,
   },
   optionLabelSelected: {
-    color: colors.primaryDark,
+    color: liquidGlass.accent.primary,
   },
   optionDescription: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: liquidGlass.text.tertiary,
+    lineHeight: 20,
   },
   optionDescriptionSelected: {
-    color: colors.primary,
+    color: liquidGlass.text.secondary,
   },
   optionRadio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: liquidGlass.border.glassMedium,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
+    marginLeft: 16,
   },
   optionRadioSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
+    borderColor: liquidGlass.accent.primary,
   },
   optionCheckbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: liquidGlass.border.glassMedium,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
+    marginLeft: 16,
   },
   optionCheckboxSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
+    borderColor: liquidGlass.accent.primary,
   },
   navigationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingVertical: 16,
-    paddingBottom: 24,
-    backgroundColor: colors.background,
+    paddingVertical: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    backgroundColor: 'rgba(2, 6, 23, 0.8)',
     borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
+    borderTopColor: liquidGlass.border.glassLight,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingRight: 12,
+    paddingRight: 16,
   },
   backButtonText: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginLeft: 4,
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.secondary,
+    marginLeft: 6,
   },
   navRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
   skipButton: {
     paddingVertical: 12,
@@ -1243,28 +1326,31 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: 15,
-    color: colors.textTertiary,
+    color: liquidGlass.text.tertiary,
+    fontWeight: '600' as const,
   },
   nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    backgroundColor: liquidGlass.accent.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     borderRadius: 24,
-    gap: 4,
+    gap: 6,
   },
   nextButtonDisabled: {
-    backgroundColor: colors.textTertiary,
+    backgroundColor: liquidGlass.text.tertiary,
+    opacity: 0.3,
   },
   nextButtonText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: colors.surface,
+    fontSize: 16,
+    fontWeight: '800' as const,
+    color: liquidGlass.text.inverse,
   },
   reeIntroContainer: {
     flex: 1,
     padding: 24,
+    paddingTop: glassLayout.screenPaddingTop,
     justifyContent: 'space-between',
   },
   reeIntroContent: {
@@ -1273,62 +1359,82 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reeAvatarLarge: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: colors.primary,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: liquidGlass.accent.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    marginBottom: 32,
+    ...glassShadows.glow,
   },
   reeIntroTitle: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    color: colors.text,
+    fontSize: 32,
+    fontWeight: '800' as const,
+    color: liquidGlass.text.primary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    letterSpacing: -1,
   },
   reeIntroSubtitle: {
-    fontSize: 17,
-    color: colors.textSecondary,
+    fontSize: 18,
+    color: liquidGlass.text.secondary,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
+    lineHeight: 26,
   },
   summaryCard: {
     width: '100%',
-    backgroundColor: colors.surface,
-    borderRadius: 20,
+    backgroundColor: liquidGlass.surface.card,
+    borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginBottom: 24,
+    borderColor: liquidGlass.border.glass,
+    marginBottom: 32,
+    ...glassShadows.soft,
   },
   summaryTitle: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: colors.primary,
-    marginBottom: 16,
+    fontSize: 12,
+    fontWeight: '800' as const,
+    color: liquidGlass.accent.primary,
+    marginBottom: 20,
+    letterSpacing: 2,
   },
-  summaryItem: {
-    fontSize: 15,
-    color: colors.text,
+  summaryList: {
+    gap: 12,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  summaryDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: liquidGlass.accent.primary,
+    marginTop: 8,
+  },
+  summaryText: {
+    fontSize: 16,
+    color: liquidGlass.text.secondary,
     lineHeight: 24,
-    marginBottom: 4,
+    flex: 1,
+  },
+  summaryHighlight: {
+    color: liquidGlass.text.primary,
+    fontWeight: '700' as const,
   },
   reeIntroNote: {
     fontSize: 14,
-    color: colors.textTertiary,
+    color: liquidGlass.text.tertiary,
     textAlign: 'center',
     lineHeight: 22,
   },
   disclaimerContainer: {
     flex: 1,
     padding: 24,
+    paddingTop: glassLayout.screenPaddingTop,
     justifyContent: 'space-between',
   },
   disclaimerContent: {
@@ -1336,58 +1442,60 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   disclaimerIconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primaryMuted,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: liquidGlass.status.warningMuted,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   disclaimerTitle: {
-    fontSize: 26,
-    fontWeight: '700' as const,
-    color: colors.text,
+    fontSize: 32,
+    fontWeight: '800' as const,
+    color: liquidGlass.text.primary,
     textAlign: 'center',
     marginBottom: 24,
+    letterSpacing: -1,
   },
   disclaimerBox: {
-    backgroundColor: colors.surface,
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 32,
+    backgroundColor: liquidGlass.surface.card,
+    padding: 24,
+    borderRadius: 24,
+    marginBottom: 40,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: liquidGlass.border.glass,
+    ...glassShadows.soft,
   },
   disclaimerText: {
     fontSize: 15,
-    color: colors.textSecondary,
+    color: liquidGlass.text.secondary,
     lineHeight: 22,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 14,
   },
   checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 2,
-    borderColor: colors.textSecondary,
+    borderColor: liquidGlass.border.glassMedium,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
+    borderColor: liquidGlass.accent.primary,
+    backgroundColor: liquidGlass.accent.primary,
   },
   checkboxLabel: {
-    fontSize: 16,
-    color: colors.text,
-    fontWeight: '500' as const,
+    fontSize: 17,
+    color: liquidGlass.text.primary,
+    fontWeight: '600' as const,
   },
 });

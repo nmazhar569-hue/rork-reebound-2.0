@@ -1,12 +1,12 @@
-import { Tabs, useSegments } from "expo-router";
+import { Tabs, useSegments, useRouter } from "expo-router";
 import { Home, Calendar, Activity, TrendingUp } from "lucide-react-native";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { liquidGlass } from "@/constants/liquidGlass";
 
-import { ReeFloatingButton } from "@/components/ReeFloatingButton";
 import { useRee } from "@/contexts/ReeContext";
 import { ReeScreenContext } from "@/types";
+import { haptics } from "@/utils/haptics";
 
 export default function TabLayout() {
   const segments = useSegments();
@@ -16,39 +16,30 @@ export default function TabLayout() {
     const currentTab = segments[1] || 'index';
     const contextMap: Record<string, ReeScreenContext> = {
       'index': 'home',
-      'plan': 'plan',
       'recovery': 'recovery',
       'progress': 'progress',
     };
     const screenContext = contextMap[currentTab] || 'home';
-    console.log('[TabLayout] Screen context:', screenContext);
     updateScreenContext(screenContext);
   }, [segments, updateScreenContext]);
 
   return (
     <View style={{ flex: 1, backgroundColor: liquidGlass.background.primary }}>
-      
       <Tabs
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            display: 'none', // Hide the tab bar completely
+            display: 'none',
           },
         }}
       >
         <Tabs.Screen name="index" options={{ title: "Home" }} />
-        <Tabs.Screen name="plan" options={{ title: "Plan" }} />
         <Tabs.Screen name="recovery" options={{ title: "Recovery" }} />
         <Tabs.Screen name="progress" options={{ title: "Progress" }} />
         <Tabs.Screen name="nutrition" options={{ href: null }} />
       </Tabs>
-      
-      {/* Floating AI button for navigation */}
-      <ReeFloatingButton />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  // No longer needed since button positions itself
-});
+const styles = StyleSheet.create({});

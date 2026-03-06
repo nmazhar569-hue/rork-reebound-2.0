@@ -53,6 +53,7 @@ interface SmartFoodLoggerProps {
     carbs: number;
     fats: number;
     inflammationScore?: number;
+    minerals?: any;
   }) => void;
   mealName: string;
 }
@@ -67,16 +68,16 @@ export function SmartFoodLogger({ visible, onClose, onSave, mealName }: SmartFoo
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FoodInputResult | null>(null);
   const [editableEntry, setEditableEntry] = useState<FoodNutrition | null>(null);
-  
+
   const [cameraMode, setCameraMode] = useState<CameraMode>('barcode');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [isScanning, setIsScanning] = useState(true);
-  
+
   const [isRecording, setIsRecording] = useState(false);
   const [audioPermission, setAudioPermission] = useState<boolean>(false);
   const recordingRef = useRef<Audio.Recording | null>(null);
-  
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
 
@@ -149,17 +150,17 @@ export function SmartFoodLogger({ visible, onClose, onSave, mealName }: SmartFoo
 
   const handleTextSubmit = useCallback(async () => {
     if (!textInput.trim()) return;
-    
+
     haptics.medium();
     setIsProcessing(true);
     setError(null);
-    
+
     try {
       const foodResult = await processFoodInput({
         source: 'text',
         text: textInput.trim(),
       });
-      
+
       setResult(foodResult);
       if (foodResult.items.length > 0) {
         setEditableEntry({
@@ -168,6 +169,7 @@ export function SmartFoodLogger({ visible, onClose, onSave, mealName }: SmartFoo
           protein: foodResult.totalProtein,
           carbs: foodResult.totalCarbs,
           fats: foodResult.totalFats,
+          minerals: foodResult.items[0]?.minerals,
           confidence: 'medium',
         });
       }
@@ -186,7 +188,7 @@ export function SmartFoodLogger({ visible, onClose, onSave, mealName }: SmartFoo
       setError('Voice recording is not available on web');
       return;
     }
-    
+
     const hasPermission = audioPermission || await requestAudioPermission();
     if (!hasPermission) {
       Alert.alert('Permission Required', 'Microphone access is needed for voice input');
@@ -277,7 +279,7 @@ export function SmartFoodLogger({ visible, onClose, onSave, mealName }: SmartFoo
         return;
       }
     }
-    
+
     setCameraMode(mode);
     setInputMode('camera');
     setIsScanning(true);
@@ -286,7 +288,7 @@ export function SmartFoodLogger({ visible, onClose, onSave, mealName }: SmartFoo
 
   const handleBarcodeScanned = useCallback(async (result: BarcodeScanningResult) => {
     if (!isScanning) return;
-    
+
     setIsScanning(false);
     haptics.medium();
     setIsProcessing(true);
@@ -309,6 +311,7 @@ export function SmartFoodLogger({ visible, onClose, onSave, mealName }: SmartFoo
           carbs: foodResult.totalCarbs,
           fats: foodResult.totalFats,
           confidence: 'high',
+          minerals: foodResult.items[0].minerals,
         });
       }
       setInputMode(null);
@@ -381,6 +384,7 @@ export function SmartFoodLogger({ visible, onClose, onSave, mealName }: SmartFoo
       carbs: editableEntry.carbs,
       fats: editableEntry.fats,
       inflammationScore: editableEntry.inflammationScore,
+      minerals: editableEntry.minerals,
     });
     onClose();
   }, [editableEntry, onSave, onClose]);

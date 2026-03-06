@@ -9,6 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import colors, { borderRadius } from '@/constants/colors';
+import { liquidGlass, glassShadows } from '@/constants/liquidGlass';
 
 interface SelectionGroupProps<T> {
   label?: string;
@@ -106,7 +107,7 @@ export function InputField({ label, containerStyle, style, ...props }: InputFiel
       {label && <Text style={styles.inputLabel}>{label}</Text>}
       <TextInput
         style={[styles.input, style]}
-        placeholderTextColor={colors.textTertiary}
+        placeholderTextColor={liquidGlass.text.tertiary}
         {...props}
       />
     </View>
@@ -119,13 +120,13 @@ const styles = StyleSheet.create({
   },
   groupLabel: {
     fontSize: 14,
-    fontWeight: '500' as const,
-    color: colors.textSecondary,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.secondary,
     marginBottom: 12,
   },
   groupHint: {
     fontSize: 13,
-    color: colors.textTertiary,
+    color: liquidGlass.text.tertiary,
     marginBottom: 12,
     marginTop: -8,
   },
@@ -137,23 +138,23 @@ const styles = StyleSheet.create({
   chip: {
     paddingVertical: 10,
     paddingHorizontal: 18,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background,
+    borderRadius: 20,
+    backgroundColor: liquidGlass.surface.glass,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: liquidGlass.border.glass,
   },
   chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
+    borderColor: liquidGlass.accent.primary,
   },
   chipText: {
     fontSize: 14,
-    color: colors.text,
+    color: liquidGlass.text.primary,
     fontWeight: '500' as const,
   },
   chipTextSelected: {
-    color: colors.surface,
-    fontWeight: '600' as const,
+    color: liquidGlass.text.inverse,
+    fontWeight: '700' as const,
   },
   listContainer: {
     gap: 12,
@@ -161,16 +162,17 @@ const styles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: liquidGlass.surface.card,
     paddingVertical: 18,
     paddingHorizontal: 20,
-    borderRadius: borderRadius.xl,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: liquidGlass.border.glass,
+    ...glassShadows.soft,
   },
   listItemSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '08',
+    borderColor: liquidGlass.accent.primary,
+    backgroundColor: liquidGlass.accent.muted,
   },
   listItemContent: {
     flex: 1,
@@ -178,38 +180,38 @@ const styles = StyleSheet.create({
   listItemLabel: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: colors.text,
+    color: liquidGlass.text.primary,
   },
   listItemLabelSelected: {
-    color: colors.primary,
+    color: liquidGlass.accent.primary,
   },
   listItemDescription: {
     fontSize: 13,
-    color: colors.textTertiary,
+    color: liquidGlass.text.tertiary,
     marginTop: 2,
   },
   listItemCheck: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
   },
   inputContainer: {
     marginBottom: 16,
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500' as const,
-    color: colors.textSecondary,
+    fontWeight: '600' as const,
+    color: liquidGlass.text.secondary,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: colors.background,
+    backgroundColor: liquidGlass.surface.card,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: borderRadius.lg,
+    borderColor: liquidGlass.border.glass,
+    borderRadius: 16,
     padding: 16,
     fontSize: 16,
-    color: colors.text,
+    color: liquidGlass.text.primary,
   },
 });
