@@ -1,16 +1,17 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Animated 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated
 } from 'react-native';
 import { Sparkles, X, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import colors from '@/constants/colors';
 import { useRee } from '@/contexts/ReeContext';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ReePresenceProps {
   style?: object;
@@ -18,6 +19,7 @@ interface ReePresenceProps {
 
 export function ReePresence({ style }: ReePresenceProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     currentInsight,
     isMinimized,
@@ -107,7 +109,7 @@ export function ReePresence({ style }: ReePresenceProps) {
   const handleAskRee = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     recordInteraction();
-    const query = currentInsight 
+    const query = currentInsight
       ? `${currentInsight.message} Can you tell me more?`
       : "Can you help me understand what I'm looking at?";
     router.push(`/ai-chat?initialQuery=${encodeURIComponent(query)}`);
@@ -138,6 +140,7 @@ export function ReePresence({ style }: ReePresenceProps) {
         styles.container,
         style,
         {
+          bottom: 100 + insets.bottom, // Dynamic bottom offset
           opacity: fadeAnim,
           transform: [
             { translateY: slideAnim },
@@ -148,8 +151,8 @@ export function ReePresence({ style }: ReePresenceProps) {
     >
       <Animated.View style={[styles.card, { height: cardHeight, borderLeftColor: accentColor }]}>
         {isMinimized ? (
-          <TouchableOpacity 
-            style={styles.minimizedContent} 
+          <TouchableOpacity
+            style={styles.minimizedContent}
             onPress={handleToggle}
             activeOpacity={0.8}
           >
@@ -173,15 +176,15 @@ export function ReePresence({ style }: ReePresenceProps) {
                 <Text style={styles.reeLabel}>Ree</Text>
               </View>
               <View style={styles.headerActions}>
-                <TouchableOpacity 
-                  onPress={handleToggle} 
+                <TouchableOpacity
+                  onPress={handleToggle}
                   style={styles.headerButton}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   <ChevronDown size={16} color={colors.textTertiary} />
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={handleDismiss} 
+                <TouchableOpacity
+                  onPress={handleDismiss}
                   style={styles.headerButton}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
@@ -210,7 +213,7 @@ export function ReePresence({ style }: ReePresenceProps) {
 export function ReeMiniBadge() {
   const router = useRouter();
   const { shouldShowPresence, hasUnseenInsight, recordInteraction } = useRee();
-  
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -246,7 +249,7 @@ export function ReeMiniBadge() {
 
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
-      <Animated.View 
+      <Animated.View
         style={[
           styles.miniBadge,
           { transform: [{ scale: pulseAnim }] },
@@ -263,7 +266,9 @@ export function ReeMiniBadge() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 100,
+    // Dynamic bottom position to avoid home indicator
+    bottom: 0,
+    paddingBottom: 0, // Handled by container style dynamic calculation in render
     left: 16,
     right: 16,
     zIndex: 100,

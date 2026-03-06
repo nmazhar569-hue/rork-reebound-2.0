@@ -42,7 +42,11 @@ export function QuickActions({
     const defaultActions: QuickAction[] = [
         {
             id: 'start-workout',
+<<<<<<< HEAD
             label: 'View Workout Plan',
+=======
+            label: 'Start Workout',
+>>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
             icon: Play,
             variant: 'primary',
             onPress: onStartWorkout || (() => { }),
