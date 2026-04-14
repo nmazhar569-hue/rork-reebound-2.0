@@ -1,9 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-<<<<<<< HEAD
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Image } from 'react-native';
-=======
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Svg, { Defs, LinearGradient as SvgGradient, Stop, Circle } from 'react-native-svg';
@@ -27,20 +23,12 @@ interface ReeButtonProps {
     onPress: () => void;
     hasNewInsights?: boolean;
     size?: number;
-<<<<<<< HEAD
-=======
-    avatarIcon?: string; // Placeholder for user's chosen avatar
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
 }
 
 export function ReeButton({
     onPress,
     hasNewInsights = false,
     size = 72,
-<<<<<<< HEAD
-=======
-    avatarIcon = 'R',
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
 }: ReeButtonProps) {
     // Pulsing animation for new insights
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -141,15 +129,11 @@ export function ReeButton({
 
                         {/* Avatar icon */}
                         <View style={styles.avatarContainer}>
-<<<<<<< HEAD
                             <Image
                                 source={require('@/assets/images/ree-avatar.png')}
                                 style={styles.avatarImage}
                                 resizeMode="cover"
                             />
-=======
-                            <Text style={styles.avatarText}>{avatarIcon}</Text>
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
                         </View>
                     </View>
 
@@ -209,7 +193,6 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     avatarContainer: {
-<<<<<<< HEAD
         width: '100%',
         height: '100%',
         alignItems: 'center',
@@ -221,20 +204,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 999,
-=======
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1,
-    },
-    avatarText: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: theme.colors.text,
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
     },
     label: {
         fontSize: 13,
@@ -246,10 +215,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         borderRadius: 999,
         backgroundColor: theme.colors.primary,
-<<<<<<< HEAD
         zIndex: -1, // Ensure glow is behind the button
-=======
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
     },
     notificationDot: {
         position: 'absolute',

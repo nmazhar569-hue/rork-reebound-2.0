@@ -37,13 +37,10 @@ export const liquidGlass = {
     secondaryDark: '#EA580C',
     secondaryMuted: 'rgba(251, 146, 60, 0.15)',
     secondaryGlow: 'rgba(251, 146, 60, 0.4)',
-<<<<<<< HEAD
 
     // Backward compatibility aliases
     glow: 'rgba(20, 184, 166, 0.4)',
     muted: 'rgba(20, 184, 166, 0.15)',
-=======
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   },
 
   // Glass surface colors (for frosted cards)
@@ -62,7 +59,6 @@ export const liquidGlass = {
     // Input fields
     input: 'rgba(10, 22, 40, 0.6)',
     inputFocused: 'rgba(20, 184, 166, 0.1)',
-<<<<<<< HEAD
 
     // New Home Screen Card Variants
     cardYellow: 'rgba(254, 243, 199, 0.95)', // #fef3c7 (Recovery)
@@ -74,8 +70,6 @@ export const liquidGlass = {
     cardWhiteGlass: 'rgba(255, 255, 255, 0.15)', // Glassy white
 
     cardTintBlue: 'rgba(219, 234, 254, 0.9)', // #dbeafe (Ree Insight)
-=======
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   },
 
   // Text colors (for dark background)
@@ -148,15 +142,12 @@ export const liquidGlass = {
     // Background gradients
     void: ['#0A1628', '#050D1A', '#020617'] as const,
     surface: ['#0F1D32', '#0A1628'] as const,
-<<<<<<< HEAD
 
     // Home Screen Gradients (Dark Premium)
     recoveryCard: ['rgba(66, 42, 12, 0.8)', 'rgba(50, 30, 10, 0.9)'] as const, // Dark Amber
     heroCard: ['rgba(23, 37, 84, 0.9)', 'rgba(10, 15, 30, 0.95)'] as const, // Deep Blue/Black
     insightCard: ['rgba(30, 58, 138, 0.3)', 'rgba(23, 37, 84, 0.4)'] as const, // Subtle Blue
     heroGlow: ['rgba(59, 130, 246, 0.3)', 'rgba(37, 99, 235, 0.1)'] as const,
-=======
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   },
 };
 
@@ -324,7 +315,6 @@ export const glassLayout = {
   tabBarHeight: 100,
 };
 
-<<<<<<< HEAD
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -335,8 +325,6 @@ export const spacing = {
   xxxl: 32,
 };
 
-=======
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
 // ============================================================================
 // BLUR INTENSITY (for expo-blur)
 // ============================================================================

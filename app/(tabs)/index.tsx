@@ -1,9 +1,5 @@
 import { router, useRouter, useFocusEffect } from 'expo-router';
-<<<<<<< HEAD
 import { Bell, Star, Compass, BarChart } from 'lucide-react-native';
-=======
-import { Bell, Star } from 'lucide-react-native';
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -15,15 +11,10 @@ import {
   UIManager,
   Modal,
 } from 'react-native';
-<<<<<<< HEAD
-=======
-import { LinearGradient } from 'expo-linear-gradient';
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
 
 import { useApp } from '@/contexts/AppContext';
 import { useRee } from '@/contexts/ReeContext';
 import { haptics } from '@/utils/haptics';
-<<<<<<< HEAD
 import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
 import colors from '@/constants/colors';
 
@@ -41,21 +32,6 @@ import { ReeCheckInModal } from '@/components/ReeCheckInModal';
 
 
 // Services
-=======
-import { theme } from '@/constants/theme';
-import { liquidGlass, glassShadows, glassLayout } from '@/constants/liquidGlass';
-
-// Components
-import { DynamicStatusPanel, PanelContext } from '@/components/DynamicStatusPanel';
-import { ReeButton } from '@/components/ReeButton';
-import { QuickActions } from '@/components/QuickActions';
-import { RecoveryInbox } from '@/components/RecoveryInbox';
-import { ReeAnalysisModal } from '@/components/ReeAnalysisModal';
-import { VoidBackground } from '@/components/ui/VoidBackground';
-
-// Services
-import { analysisService, RecoveryAnalysis } from '@/services/AnalysisService';
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
 import { calendarService, DailyAvailability } from '@/services/CalendarService';
 
 import { storageService } from '@/services/StorageService';
@@ -76,7 +52,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function HomeScreen() {
   const {
     userProfile,
-<<<<<<< HEAD
     dailyLogs,
     getTodayWorkout,
     isLoading,
@@ -94,33 +69,11 @@ export default function HomeScreen() {
   // State
   const [hasNotifications] = useState(true);
   const [inboxVisible, setInboxVisible] = useState(false);
-=======
-    getTodayWorkout,
-    getTodayReadiness,
-    isLoading,
-    getReturnStatus,
-    recordActivity,
-    userPoints
-  } = useApp();
-
-  const { updateScreenContext, hasUnseenInsight } = useRee();
-  const todayWorkout = getTodayWorkout();
-  const todayReadiness = getTodayReadiness();
-  const returnStatus = getReturnStatus();
-  const routerInstance = useRouter();
-
-  // State
-  const [hasNotifications] = useState(true);
-  const [inboxVisible, setInboxVisible] = useState(false);
-  const [checkInModalVisible, setCheckInModalVisible] = useState(false);
-  const [recoveryStatus, setRecoveryStatus] = useState<RecoveryAnalysis | null>(null);
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   const [calendarAvailability, setCalendarAvailability] = useState<DailyAvailability | null>(null);
   const [reeInsight, setReeInsight] = useState<ReeInsightData | null>(null);
   const [checkInVisible, setCheckInVisible] = useState(false);
   const [readinessData, setReadinessData] = useState<ReadinessData | null>(null);
 
-<<<<<<< HEAD
   // Recovery Engine State
   const [activePlan, setActivePlan] = useState<RecoveryPlan | null>(null);
   const [recoveryRec, setRecoveryRec] = useState<RecoveryRecommendation | null>(null);
@@ -128,42 +81,6 @@ export default function HomeScreen() {
   const [dashboardVisible, setDashboardVisible] = useState(false);
   const [activityLoggerVisible, setActivityLoggerVisible] = useState(false);
 
-=======
-  // Mock biometrics (will be replaced with real data later)
-  const mockBiometrics = useMemo(() => {
-    const painLevel = todayReadiness?.painLevel ?? 3;
-    const sleepHours = 7.8;
-    const hrvValue = painLevel > 6 ? 35 : painLevel > 3 ? 45 : 55;
-    const stressLevel = painLevel > 5 ? 7 : 4;
-
-    return {
-      sleepHours,
-      hrv: hrvValue,
-      stressRating: stressLevel,
-      sorenessRating: painLevel,
-    };
-  }, [todayReadiness]);
-
-  // Determine panel context based on time and state
-  const panelContext = useMemo((): PanelContext => {
-    const hour = new Date().getHours();
-    const isMorning = hour >= 5 && hour < 12;
-    const isEvening = hour >= 18 || hour < 5;
-    const hasWorkedOutToday = todayReadiness?.painLevel !== undefined;
-    const isRestDay = !todayWorkout;
-    const isLowEnergy = mockBiometrics.stressRating >= 7;
-
-    if (isLowEnergy) return 'low_energy';
-    if (isRestDay) return 'rest_day';
-    if (hasWorkedOutToday && isEvening) return 'evening_complete';
-    if (hasWorkedOutToday) return 'post_workout';
-    if (isMorning) return 'morning_ready';
-    if (isEvening && !hasWorkedOutToday) return 'evening_pending';
-
-    return 'morning_ready';
-  }, [todayWorkout, todayReadiness, mockBiometrics.stressRating]);
-
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   // Initialize calendar
   useEffect(() => {
     const initCalendar = async () => {
@@ -178,15 +95,10 @@ export default function HomeScreen() {
     initCalendar();
   }, []);
 
-<<<<<<< HEAD
   // Initialize Intelligence Engine
-=======
-  // Load workout history
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   useEffect(() => {
     const loadInsights = async () => {
       try {
-<<<<<<< HEAD
         // 1. Build Model (In a real app, this runs in background)
         const model = await userInsightService.buildUserModel();
         // 2. Run Inference
@@ -197,20 +109,11 @@ export default function HomeScreen() {
         }
       } catch (err) {
         console.warn('[InsightEngine] Failed to generate insights:', err);
-=======
-        const last = await storageService.getLastWorkout();
-        const avgVolume = await storageService.getWeeklyVolumeAverage();
-        setLastWorkout(last);
-        setWeeklyVolumeAvg(avgVolume);
-      } catch (error) {
-        console.error('[HomeScreen] Error loading workout history:', error);
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
       }
     };
     loadInsights();
   }, []);
 
-<<<<<<< HEAD
   // Initialize Recovery Engine (Real Data Integration)
   useEffect(() => {
     // Only check if no active plan
@@ -286,28 +189,6 @@ export default function HomeScreen() {
     // Here we would actually update the Plan state with the log
   };
 
-=======
-  // Analyze daily state
-  useEffect(() => {
-    const freeMinutes = calendarAvailability?.totalFreeMinutes;
-    const result = analysisService.analyzeDailyState(
-      {
-        date: new Date(),
-        sleepHours: mockBiometrics.sleepHours,
-        sleepQuality: 'fair',
-        hrv: mockBiometrics.hrv,
-        restingHeartRate: 62,
-        sorenessRating: mockBiometrics.sorenessRating,
-        stressRating: mockBiometrics.stressRating,
-      },
-      lastWorkout ?? undefined,
-      weeklyVolumeAvg,
-      freeMinutes
-    );
-    setRecoveryStatus(result);
-  }, [mockBiometrics, calendarAvailability, lastWorkout, weeklyVolumeAvg]);
-
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   // Update screen context for Ree
   useFocusEffect(
     useCallback(() => {
@@ -315,7 +196,6 @@ export default function HomeScreen() {
     }, [updateScreenContext])
   );
 
-<<<<<<< HEAD
   // Real Data Logic
   // todayLog and todayDate moved to top
 
@@ -456,39 +336,6 @@ export default function HomeScreen() {
   const handleStartWorkout = () => {
     haptics.medium();
     router.push('/myworkoutplan');
-=======
-  // Redirect to onboarding if needed
-  useEffect(() => {
-    if (!isLoading && !userProfile?.onboardingCompleted) {
-      router.replace('/onboarding');
-    }
-  }, [isLoading, userProfile]);
-
-  // Record activity
-  useEffect(() => {
-    if (!isLoading && userProfile?.onboardingCompleted && !returnStatus.isReturning) {
-      recordActivity();
-    }
-  }, [isLoading, userProfile?.onboardingCompleted, returnStatus.isReturning, recordActivity]);
-
-  // Handlers
-  const handleReePress = () => {
-    setCheckInModalVisible(true);
-  };
-
-  const handleStartWorkout = () => {
-    haptics.medium();
-    if (todayWorkout) {
-      routerInstance.push(`/workout/${todayWorkout.id}`);
-    } else {
-      routerInstance.push('/(tabs)/plan');
-    }
-  };
-
-  const handleLogNutrition = () => {
-    haptics.light();
-    routerInstance.push('/(tabs)/nutrition');
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   };
 
   const handleViewNutrition = () => {
@@ -521,10 +368,6 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-<<<<<<< HEAD
-=======
-        {/* Header */}
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
         <View style={styles.header}>
           <View style={styles.logoRow}>
             <TouchableOpacity
@@ -548,7 +391,6 @@ export default function HomeScreen() {
             </View>
           </View>
 
-<<<<<<< HEAD
           {/* Centered North Star */}
           <View style={styles.centeredHeader}>
             <View style={styles.northStarBadge}>
@@ -692,78 +534,11 @@ export default function HomeScreen() {
 
       </ScrollView>
 
-=======
-          <View style={styles.headerRight}>
-            <View style={styles.pointsBadge}>
-              <Star size={14} color={theme.colors.primary} fill={theme.colors.primary} />
-              <Text style={styles.pointsText}>{userPoints}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.notificationBtn}
-              onPress={() => {
-                haptics.light();
-                setInboxVisible(true);
-              }}
-              testID="inbox-button"
-            >
-              <Bell size={20} color={theme.colors.text} />
-              {hasNotifications && <View style={styles.notificationDot} />}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* App Title */}
-        <View style={styles.titleContainer}>
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.titleGradient}
-          >
-            <Text style={styles.appTitle}>REEBOUND</Text>
-          </LinearGradient>
-        </View>
-
-        {/* Dynamic Status Panel */}
-        <View style={styles.panelContainer}>
-          <DynamicStatusPanel
-            context={panelContext}
-            readinessScore={recoveryStatus?.score ?? 78}
-            sleepHours={mockBiometrics.sleepHours}
-            workoutName={todayWorkout?.title || "Recovery Day"}
-            recoveryHours="48-72"
-            hrvTrend="up"
-          />
-        </View>
-
-        {/* Ree Analysis Button */}
-        <View style={styles.reeButtonContainer}>
-          <ReeButton
-            onPress={handleReePress}
-            hasNewInsights={hasUnseenInsight}
-          />
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActionsContainer}>
-          <QuickActions
-            onStartWorkout={handleStartWorkout}
-            onLogNutrition={handleLogNutrition}
-          />
-        </View>
-
-        {/* Bottom spacer for tab bar */}
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
-
-      {/* Recovery Inbox Modal */}
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
       <RecoveryInbox
         visible={inboxVisible}
         onClose={() => setInboxVisible(false)}
       />
 
-<<<<<<< HEAD
       <ReeCheckInModal
         visible={checkInVisible}
         onClose={() => setCheckInVisible(false)}
@@ -793,14 +568,6 @@ export default function HomeScreen() {
           onSave={handleSaveRecoveryLog}
         />
       </Modal>
-=======
-      {/* Ree Analysis Modal */}
-      <ReeAnalysisModal
-        visible={checkInModalVisible}
-        onClose={() => setCheckInModalVisible(false)}
-        onActionPress={handleStartWorkout}
-      />
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
     </VoidBackground>
   );
 }
@@ -825,7 +592,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: theme.colors.textSecondary,
+    color: liquidGlass.text.secondary,
     fontSize: 16,
   },
   scrollView: {
@@ -834,11 +601,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: glassLayout.screenPadding,
     paddingTop: glassLayout.screenPaddingTop,
-<<<<<<< HEAD
     paddingBottom: 100, // Space for floating button
-=======
-    paddingBottom: 20,
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   },
   header: {
     flexDirection: 'row',
@@ -867,32 +630,24 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   userAvatarText: {
     fontSize: 18,
     fontWeight: '800',
-<<<<<<< HEAD
     color: liquidGlass.text.inverse,
-=======
-    color: theme.colors.textInverse,
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   },
   greetingText: {
     fontSize: 13,
-    color: theme.colors.textTertiary,
+    color: liquidGlass.text.tertiary,
     marginBottom: 2,
   },
   logoTitle: {
     fontSize: 18,
     fontWeight: '700',
-<<<<<<< HEAD
     color: liquidGlass.text.primary,
-=======
-    color: theme.colors.text,
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
     letterSpacing: -0.3,
   },
   headerRight: {
@@ -904,29 +659,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-<<<<<<< HEAD
     backgroundColor: `${liquidGlass.accent.primary}20`,
-=======
-    backgroundColor: `${theme.colors.primary}20`,
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-<<<<<<< HEAD
     borderColor: `${liquidGlass.accent.primary}40`,
-=======
-    borderColor: `${theme.colors.primary}40`,
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   },
   pointsText: {
     fontSize: 15,
     fontWeight: '700',
-<<<<<<< HEAD
     color: liquidGlass.accent.primary,
-=======
-    color: theme.colors.primary,
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   },
   notificationBtn: {
     width: 44,
@@ -945,9 +688,8 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: liquidGlass.accent.primary,
   },
-<<<<<<< HEAD
   floatingRee: {
     position: 'absolute',
     bottom: 110,
@@ -1126,34 +868,5 @@ const styles = StyleSheet.create({
   activePlanSub: {
     color: liquidGlass.text.secondary,
     fontSize: 14,
-=======
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  titleGradient: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  appTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: theme.colors.textInverse,
-    letterSpacing: 4,
-  },
-  panelContainer: {
-    marginBottom: 24,
-  },
-  reeButtonContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  quickActionsContainer: {
-    marginBottom: 24,
-  },
-  bottomSpacer: {
-    height: glassLayout.tabBarHeight,
->>>>>>> cb8c6477f976d145177632dd4f91084db5d94fa3
   },
 });
